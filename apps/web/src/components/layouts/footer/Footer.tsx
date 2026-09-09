@@ -36,9 +36,11 @@ const SOCIAL_LINKS = [
 export function Footer() {
   return (
     <footer className="relative w-full overflow-hidden bg-[#071328] text-slate-300">
-      {/* Decorative Ferry Watermark in Background matching design */}
-      <div className="pointer-events-none absolute right-0 bottom-0 z-0 hidden translate-x-8 translate-y-6 opacity-10 lg:block">
-        <Ship className="h-96 w-96 text-white" />
+      {/* Large Horizontal IslandHop Watermark in Background */}
+      <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 z-0 select-none overflow-hidden opacity-[0.035] transition-opacity hover:opacity-10 dark:opacity-[0.04]">
+        <span className="block font-black uppercase tracking-tighter text-white text-[18vw] leading-none whitespace-nowrap">
+          ISLANDHOP
+        </span>
       </div>
 
       <div className="relative z-10 container mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
