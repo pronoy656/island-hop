@@ -1154,24 +1154,6 @@ export function AdminSettingsView() {
                       <p className="text-sm font-semibold text-foreground">{adminProfile.joinedDate}</p>
                     </div>
                   </div>
-
-                  {/* Security Status Indicator */}
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-200 dark:border-emerald-900/50">
-                    <div className="flex items-center gap-2.5">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                      <div>
-                        <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                          Two-Factor Authentication (2FA) Active
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Account protected via authenticator app.
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 text-[10px] font-bold">
-                      Protected
-                    </Badge>
-                  </div>
                 </CardContent>
               </Card>
             </div>
