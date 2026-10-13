@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Edit,
-  Gauge,
   Plus,
   Ship,
   Users
@@ -229,7 +228,7 @@ export default function OperatorFerriesPage() {
       </div>
 
       {/* Fleet Stats Overview */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="border-border/80 bg-card shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
@@ -248,25 +247,12 @@ export default function OperatorFerriesPage() {
         <Card className="border-border/80 bg-card shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase">Total Fleet Capacity</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Total Ferry Capacity</p>
               <p className="text-2xl font-extrabold text-foreground mt-1">{totalCapacity} Seats</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">Combined passenger capacity</p>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <Users className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/80 bg-card shadow-xs">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase">Average Speed</p>
-              <p className="text-2xl font-extrabold text-foreground mt-1">28.0 Knots</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">High-speed catamaran fleet</p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-              <Gauge className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>

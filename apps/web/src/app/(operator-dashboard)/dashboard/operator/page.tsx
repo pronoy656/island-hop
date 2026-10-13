@@ -183,12 +183,12 @@ export default function OperatorOverviewPage() {
           </CardContent>
         </Card>
 
-        {/* Active Fleet */}
+        {/* Active Ferry */}
         <Card className="border-border/80 bg-card shadow-xs">
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-1">
               <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Active Fleet
+                Active Ferry
               </p>
               <p className="text-2xl font-extrabold text-foreground tracking-tight">
                 {summaryStats.activeFleet.value}
