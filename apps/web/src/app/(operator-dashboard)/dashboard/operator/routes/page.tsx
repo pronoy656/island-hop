@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Edit,
-  Globe2,
   Navigation,
   Plus,
   Ship
@@ -11,7 +10,6 @@ import {
 import { toast } from "sonner";
 import { PROVIDER_MOCK_DATA, type ProviderRouteItem } from "@/data";
 import {
-  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -38,7 +36,7 @@ export default function OperatorRoutesPage() {
   const [routes, setRoutes] = React.useState<ProviderRouteItem[]>(PROVIDER_MOCK_DATA.routes);
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [editingRoute, setEditingRoute] = React.useState<ProviderRouteItem | null>(null);
-  const [borderFilter, setBorderFilter] = React.useState<"all" | "yes" | "no">("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "Active" | "Inactive">("all");
 
   const ferryOptions = PROVIDER_MOCK_DATA.vessels.map((v) => ({
     value: v.name,
@@ -150,10 +148,10 @@ export default function OperatorRoutesPage() {
   };
 
   const filteredRoutes = React.useMemo(() => {
-    if (borderFilter === "yes") return routes.filter((r) => r.isBorderCrossing);
-    if (borderFilter === "no") return routes.filter((r) => !r.isBorderCrossing);
+    if (statusFilter === "Active") return routes.filter((r) => r.status === "Active");
+    if (statusFilter === "Inactive") return routes.filter((r) => r.status === "Inactive");
     return routes;
-  }, [routes, borderFilter]);
+  }, [routes, statusFilter]);
 
   const routeColumns: TableColumn<ProviderRouteItem>[] = [
     {
@@ -181,19 +179,12 @@ export default function OperatorRoutesPage() {
       className: "font-mono text-xs text-muted-foreground font-medium"
     },
     {
-      header: "BORDER CROSSING",
-      className: "text-xs",
-      cell: (item) =>
-        item.isBorderCrossing ? (
-          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 text-[11px] font-semibold flex items-center gap-1 w-fit">
-            <Globe2 className="h-3 w-3" />
-            <span>Yes</span>
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-muted-foreground text-[11px] font-medium w-fit">
-            No (Domestic)
-          </Badge>
-        )
+      header: "STANDARD FEE",
+      cell: (item) => (
+        <span className="font-mono font-bold text-xs text-foreground">
+          ${item.price.toFixed(2)}
+        </span>
+      )
     },
     {
       header: "STATUS",
@@ -228,7 +219,7 @@ export default function OperatorRoutesPage() {
             Operating Routes
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Manage inter-island passenger lines, assigned ferries, duration, and border crossing controls.
+            Manage inter-island passenger lines, assigned ferries, duration, and route status.
           </p>
         </div>
 
@@ -244,21 +235,21 @@ export default function OperatorRoutesPage() {
       {/* Filter Controls with High-Contrast Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="text-xs font-semibold text-muted-foreground">Border Crossing Filter:</span>
+          <span className="text-xs font-semibold text-muted-foreground">Status Filter:</span>
           <Tabs
-            value={borderFilter}
-            onValueChange={(val) => setBorderFilter(val as "all" | "yes" | "no")}
+            value={statusFilter}
+            onValueChange={(val) => setStatusFilter(val as "all" | "Active" | "Inactive")}
             className="w-auto"
           >
             <TabsList className="h-9">
               <TabsTrigger value="all">
                 All Routes ({routes.length})
               </TabsTrigger>
-              <TabsTrigger value="yes">
-                Yes (Border) ({routes.filter((r) => r.isBorderCrossing).length})
+              <TabsTrigger value="Active">
+                Active ({routes.filter((r) => r.status === "Active").length})
               </TabsTrigger>
-              <TabsTrigger value="no">
-                No (Domestic) ({routes.filter((r) => !r.isBorderCrossing).length})
+              <TabsTrigger value="Inactive">
+                Inactive ({routes.filter((r) => r.status === "Inactive").length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -350,7 +341,7 @@ export default function OperatorRoutesPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="price" className="text-xs font-semibold text-foreground">
-                  Standard Fare ($) *
+                  Standard Fee ($) *
                 </Label>
                 <Input
                   id="price"
@@ -379,19 +370,6 @@ export default function OperatorRoutesPage() {
                   options={ROUTE_STATUS_OPTIONS}
                   placeholder="Select status"
                 />
-              </div>
-
-              <div className="sm:col-span-2 flex items-center gap-3 p-3.5 rounded-xl border border-border bg-muted/40">
-                <input
-                  id="border-crossing"
-                  type="checkbox"
-                  checked={newRoute.isBorderCrossing}
-                  onChange={(e) => setNewRoute((prev) => ({ ...prev, isBorderCrossing: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <Label htmlFor="border-crossing" className="text-xs font-semibold text-foreground cursor-pointer">
-                  This route is an International / Border Crossing Corridor (Requires Passport Check)
-                </Label>
               </div>
             </div>
 
@@ -430,7 +408,7 @@ export default function OperatorRoutesPage() {
                   Edit Route Details
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Update departure, destination ports, assigned ferry, and border crossing settings.
+                  Update departure, destination ports, assigned ferry, and route details.
                 </DialogDescription>
               </div>
             </div>
@@ -491,7 +469,7 @@ export default function OperatorRoutesPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="edit-price" className="text-xs font-semibold text-foreground">
-                  Standard Fare ($) *
+                  Standard Fee ($) *
                 </Label>
                 <Input
                   id="edit-price"
@@ -520,19 +498,6 @@ export default function OperatorRoutesPage() {
                   options={ROUTE_STATUS_OPTIONS}
                   placeholder="Select status"
                 />
-              </div>
-
-              <div className="sm:col-span-2 flex items-center gap-3 p-3.5 rounded-xl border border-border bg-muted/40">
-                <input
-                  id="edit-border-crossing"
-                  type="checkbox"
-                  checked={editForm.isBorderCrossing}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, isBorderCrossing: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <Label htmlFor="edit-border-crossing" className="text-xs font-semibold text-foreground cursor-pointer">
-                  This route is an International / Border Crossing Corridor (Requires Passport Check)
-                </Label>
               </div>
             </div>
 

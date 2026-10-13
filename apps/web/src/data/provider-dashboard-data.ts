@@ -65,10 +65,14 @@ export interface ManifestPassengerItem {
   id: string;
   ticketNumber: string;
   passengerName: string;
+  email: string;
+  phoneNumber: string;
+  gender: "Male" | "Female" | "Other";
+  passengerType: "Adult" | "Child" | "Infant" | "Senior";
   nationality: string;
   passportId: string;
-  cabinClass: "Standard" | "VIP Upper Deck" | "Business";
-  luggageCount: number;
+  cabinClass?: "Standard" | "VIP Upper Deck" | "Business";
+  luggageCount?: number;
   checkInStatus: "Boarded" | "Checked In" | "Pending";
   emergencyContact: string;
 }
@@ -231,8 +235,8 @@ export const PROVIDER_MOCK_DATA = {
       distanceNm: 28,
       dailyTrips: 2,
       price: 65.0,
-      isBorderCrossing: true,
-      status: "Active"
+      isBorderCrossing: false,
+      status: "Inactive"
     }
   ] satisfies ProviderRouteItem[],
 
@@ -414,10 +418,12 @@ export const PROVIDER_MOCK_DATA = {
           id: "P-1",
           ticketNumber: "TCK-88210-A",
           passengerName: "Michael Chang",
+          email: "michael.chang@example.com",
+          phoneNumber: "+1 (808) 555-9012",
+          gender: "Male",
+          passengerType: "Adult",
           nationality: "USA",
           passportId: "P-8829104",
-          cabinClass: "VIP Upper Deck",
-          luggageCount: 2,
           checkInStatus: "Boarded",
           emergencyContact: "+1 (808) 555-9012"
         },
@@ -425,10 +431,12 @@ export const PROVIDER_MOCK_DATA = {
           id: "P-2",
           ticketNumber: "TCK-88210-B",
           passengerName: "Lisa Chang",
+          email: "lisa.chang@example.com",
+          phoneNumber: "+1 (808) 555-9013",
+          gender: "Female",
+          passengerType: "Adult",
           nationality: "USA",
           passportId: "P-8829105",
-          cabinClass: "VIP Upper Deck",
-          luggageCount: 1,
           checkInStatus: "Boarded",
           emergencyContact: "+1 (808) 555-9012"
         },
@@ -436,10 +444,12 @@ export const PROVIDER_MOCK_DATA = {
           id: "P-3",
           ticketNumber: "TCK-88211-A",
           passengerName: "Sarah Thompson",
+          email: "sarah.t@example.com",
+          phoneNumber: "+1 (416) 555-8833",
+          gender: "Female",
+          passengerType: "Adult",
           nationality: "Canada",
           passportId: "CA-904128",
-          cabinClass: "Standard",
-          luggageCount: 2,
           checkInStatus: "Boarded",
           emergencyContact: "+1 (416) 555-8833"
         },
@@ -447,10 +457,12 @@ export const PROVIDER_MOCK_DATA = {
           id: "P-4",
           ticketNumber: "TCK-88211-B",
           passengerName: "Oliver Thompson",
+          email: "oliver.t@example.com",
+          phoneNumber: "+1 (416) 555-8833",
+          gender: "Male",
+          passengerType: "Child",
           nationality: "Canada",
           passportId: "CA-904129",
-          cabinClass: "Standard",
-          luggageCount: 1,
           checkInStatus: "Checked In",
           emergencyContact: "+1 (416) 555-8833"
         },
@@ -458,10 +470,12 @@ export const PROVIDER_MOCK_DATA = {
           id: "P-5",
           ticketNumber: "TCK-88212-A",
           passengerName: "Kenji Sato",
+          email: "kenji.sato@example.jp",
+          phoneNumber: "+81 90-5555-1234",
+          gender: "Male",
+          passengerType: "Adult",
           nationality: "Japan",
           passportId: "JP-774019",
-          cabinClass: "Business",
-          luggageCount: 2,
           checkInStatus: "Pending",
           emergencyContact: "+81 90-5555-1234"
         }
@@ -483,10 +497,12 @@ export const PROVIDER_MOCK_DATA = {
           id: "P-6",
           ticketNumber: "TCK-99014-A",
           passengerName: "David Kim",
+          email: "david.kim@example.com",
+          phoneNumber: "+1 (206) 555-0199",
+          gender: "Male",
+          passengerType: "Adult",
           nationality: "USA",
           passportId: "US-449102",
-          cabinClass: "Standard",
-          luggageCount: 2,
           checkInStatus: "Checked In",
           emergencyContact: "+1 (206) 555-0199"
         },
@@ -494,10 +510,12 @@ export const PROVIDER_MOCK_DATA = {
           id: "P-7",
           ticketNumber: "TCK-99014-B",
           passengerName: "Grace Kim",
+          email: "grace.kim@example.com",
+          phoneNumber: "+1 (206) 555-0199",
+          gender: "Female",
+          passengerType: "Adult",
           nationality: "USA",
           passportId: "US-449103",
-          cabinClass: "Standard",
-          luggageCount: 2,
           checkInStatus: "Checked In",
           emergencyContact: "+1 (206) 555-0199"
         }

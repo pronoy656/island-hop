@@ -56,11 +56,16 @@ export default function OperatorManifestPage() {
   };
 
   const filteredPassengers = React.useMemo(() => {
+    const query = searchTerm.toLowerCase();
     return currentTrip.passengers.filter(
       (p) =>
-        p.passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.passportId.toLowerCase().includes(searchTerm.toLowerCase())
+        p.passengerName.toLowerCase().includes(query) ||
+        p.ticketNumber.toLowerCase().includes(query) ||
+        p.passportId.toLowerCase().includes(query) ||
+        p.email.toLowerCase().includes(query) ||
+        p.phoneNumber.toLowerCase().includes(query) ||
+        p.gender.toLowerCase().includes(query) ||
+        p.passengerType.toLowerCase().includes(query)
     );
   }, [currentTrip, searchTerm]);
 
@@ -71,9 +76,24 @@ export default function OperatorManifestPage() {
       className: "font-mono font-bold text-slate-700 dark:text-slate-300 text-xs"
     },
     {
-      header: "PASSENGER NAME",
-      accessorKey: "passengerName",
-      className: "font-bold text-foreground"
+      header: "PASSENGER",
+      className: "text-xs",
+      cell: (item) => (
+        <div className="flex flex-col">
+          <span className="font-bold text-foreground text-xs">{item.passengerName}</span>
+          <span className="text-[11px] text-muted-foreground">{item.email}</span>
+        </div>
+      )
+    },
+    {
+      header: "GENDER / PASSENGER TYPE",
+      className: "text-xs font-medium text-foreground",
+      cell: (item) => `${item.gender} / ${item.passengerType || "Adult"}`
+    },
+    {
+      header: "PHONE NUMBER",
+      accessorKey: "phoneNumber",
+      className: "font-mono text-xs text-muted-foreground"
     },
     {
       header: "NATIONALITY",
@@ -84,17 +104,6 @@ export default function OperatorManifestPage() {
       header: "PASSPORT / ID",
       accessorKey: "passportId",
       className: "font-mono text-muted-foreground text-xs"
-    },
-    {
-      header: "CABIN CLASS",
-      accessorKey: "cabinClass",
-      className: "text-foreground font-medium text-xs"
-    },
-    {
-      header: "LUGGAGE",
-      className: "text-center text-xs font-mono font-semibold",
-      align: "center",
-      cell: (item) => `${item.luggageCount} bags`
     },
     {
       header: "STATUS",
@@ -130,7 +139,7 @@ export default function OperatorManifestPage() {
             Passenger Manifest & Boarding
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Official Coast Guard compliance passenger manifest, deck luggage, and boarding audit.
+            Official compliance passenger manifest, contact verification, and boarding audit.
           </p>
         </div>
 
@@ -220,7 +229,7 @@ export default function OperatorManifestPage() {
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search manifest by name, ticket, passport..."
+            placeholder="Search manifest by name, email, phone, ticket..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8 text-xs h-9 bg-card"
