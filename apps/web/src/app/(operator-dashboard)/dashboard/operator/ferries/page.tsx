@@ -51,7 +51,6 @@ export default function OperatorFerriesPage() {
     yearBuilt: 2023,
     registrationNumber: "",
     speedKnots: 28,
-    assignedRoute: "Honolulu ⇄ Maui",
     status: "In Service" as ProviderVessel["status"]
   });
 
@@ -63,7 +62,6 @@ export default function OperatorFerriesPage() {
     yearBuilt: 2023,
     registrationNumber: "",
     speedKnots: 28,
-    assignedRoute: "Honolulu ⇄ Maui",
     status: "In Service" as ProviderVessel["status"]
   });
 
@@ -76,7 +74,6 @@ export default function OperatorFerriesPage() {
       yearBuilt: vessel.yearBuilt,
       registrationNumber: vessel.registrationNumber,
       speedKnots: vessel.speedKnots,
-      assignedRoute: vessel.assignedRoute || "Unassigned",
       status: vessel.status
     });
   };
@@ -96,8 +93,7 @@ export default function OperatorFerriesPage() {
       yearBuilt: Number(newVessel.yearBuilt) || 2024,
       registrationNumber: newVessel.registrationNumber.trim(),
       status: newVessel.status,
-      speedKnots: Number(newVessel.speedKnots) || 25,
-      assignedRoute: newVessel.assignedRoute
+      speedKnots: Number(newVessel.speedKnots) || 25
     };
 
     setVessels((prev) => [created, ...prev]);
@@ -109,7 +105,6 @@ export default function OperatorFerriesPage() {
       yearBuilt: 2023,
       registrationNumber: "",
       speedKnots: 28,
-      assignedRoute: "Honolulu ⇄ Maui",
       status: "In Service"
     });
     toast.success(`Ferry "${created.name}" registered successfully!`);
@@ -130,8 +125,7 @@ export default function OperatorFerriesPage() {
               yearBuilt: Number(editForm.yearBuilt) || v.yearBuilt,
               registrationNumber: editForm.registrationNumber.trim() || v.registrationNumber,
               status: editForm.status,
-              speedKnots: Number(editForm.speedKnots) || v.speedKnots,
-              assignedRoute: editForm.assignedRoute
+              speedKnots: Number(editForm.speedKnots) || v.speedKnots
             }
           : v
       )
@@ -171,14 +165,6 @@ export default function OperatorFerriesPage() {
           <Users className="h-3.5 w-3.5 text-muted-foreground" />
           <span>{item.capacity} Seats</span>
         </div>
-      )
-    },
-    {
-      header: "ASSIGNED ROUTE",
-      cell: (item) => (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
-          {item.assignedRoute || "Unassigned"}
-        </span>
       )
     },
     {
@@ -335,18 +321,6 @@ export default function OperatorFerriesPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="vessel-route" className="text-xs font-semibold text-foreground">
-                  Assigned Route
-                </Label>
-                <Input
-                  id="vessel-route"
-                  placeholder="e.g. Honolulu ⇄ Maui"
-                  value={newVessel.assignedRoute}
-                  onChange={(e) => setNewVessel((prev) => ({ ...prev, assignedRoute: e.target.value }))}
-                  className="text-xs h-9"
-                />
-              </div>
 
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-foreground">
@@ -484,17 +458,6 @@ export default function OperatorFerriesPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-vessel-route" className="text-xs font-semibold text-foreground">
-                  Assigned Route
-                </Label>
-                <Input
-                  id="edit-vessel-route"
-                  value={editForm.assignedRoute}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, assignedRoute: e.target.value }))}
-                  className="text-xs h-9"
-                />
-              </div>
 
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-foreground">
