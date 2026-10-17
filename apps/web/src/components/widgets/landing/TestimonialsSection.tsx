@@ -1,4 +1,4 @@
-import { CheckCircle2, MessageSquare, Quote, Star } from "lucide-react";
+import { CheckCircle2, Quote, Star } from "lucide-react";
 
 const TESTIMONIALS = [
   {
@@ -45,10 +45,6 @@ export function TestimonialsSection() {
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mx-auto max-w-3xl text-center space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3.5 py-1 text-xs font-bold tracking-wider text-blue-600 uppercase shadow-xs dark:text-blue-400">
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span>REAL TRAVELER EXPERIENCES</span>
-          </div>
           <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Loved by 50,000+ Island Explorers
           </h2>

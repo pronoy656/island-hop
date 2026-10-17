@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -92,65 +89,35 @@ export const POPULAR_JOURNEYS = [
   }
 ];
 
-const CATEGORIES = [
-  { id: "all", label: "All Routes" },
-  { id: "speedboat", label: "Speedboat Express" },
-  { id: "scenic", label: "Scenic Atoll Tours" }
-];
-
 export function PopularJourneysSection() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
-
-  const filteredJourneys = POPULAR_JOURNEYS.filter((journey) => {
-    if (selectedCategory === "all") return true;
-    return journey.category === selectedCategory;
-  });
-
   return (
-    <section id="schedules" className="py-16 md:py-24">
+    <section id="schedules" className="pt-16 pb-6 md:pt-20 md:pb-8">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div className="space-y-2 max-w-2xl">
+          <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3.5 py-1 text-xs font-bold tracking-wider text-blue-600 uppercase shadow-xs dark:text-blue-400">
               <Compass className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               <span>POPULAR JOURNEYS</span>
             </div>
-            <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-foreground sm:text-4xl lg:text-5xl">
               Where are you heading?
             </h2>
-            <p className="text-xs text-muted-foreground sm:text-sm md:text-base leading-relaxed">
+            <p className="mt-4 text-xs text-muted-foreground sm:text-sm md:text-base leading-relaxed">
               Discover frequently travelled routes, guaranteed daily departures, and transparent fixed fares with no hidden booking fees.
             </p>
           </div>
 
-          {/* Category Filter Pills & View All Link */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex rounded-xl border border-border/70 bg-muted/40 p-1">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={cn(
-                    "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                    selectedCategory === cat.id
-                      ? "bg-card text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-
+          {/* View All Routes Button */}
+          <div>
             <Button
               variant="outline"
               asChild
-              className="h-9 rounded-xl border-blue-500/30 text-xs font-bold text-blue-600 shadow-2xs hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
+              className="h-10 rounded-xl border-blue-500/30 text-xs sm:text-sm font-bold text-blue-600 shadow-2xs hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
             >
-              <Link href="/routes" className="group inline-flex items-center gap-1.5">
+              <Link href="/routes" className="group inline-flex items-center gap-2">
                 <span>View all routes</span>
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </Button>
           </div>
@@ -158,7 +125,7 @@ export function PopularJourneysSection() {
 
         {/* Cards Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredJourneys.map((journey) => (
+          {POPULAR_JOURNEYS.map((journey) => (
             <div
               key={journey.id}
               className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/10"

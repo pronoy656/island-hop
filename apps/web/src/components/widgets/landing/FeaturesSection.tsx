@@ -6,7 +6,6 @@ import {
   RefreshCw,
   ShieldCheck,
   Ship,
-  Sparkles,
   Sun,
   Waves,
   Wifi,
@@ -58,14 +57,10 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section className="py-16 md:py-24">
+    <section className="pt-2 pb-16 md:pt-4 md:pb-24">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mx-auto max-w-3xl text-center space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3.5 py-1 text-xs font-bold tracking-wider text-blue-600 uppercase shadow-xs dark:text-blue-400">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>THE ISLANDHOP ADVANTAGE</span>
-          </div>
           <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Designed for Modern Sea Travelers
           </h2>

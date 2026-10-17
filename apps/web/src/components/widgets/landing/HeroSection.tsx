@@ -13,7 +13,6 @@ import {
   QrCode,
   ShieldCheck,
   Ship,
-  Sparkles,
   Users
 } from "lucide-react";
 
@@ -164,12 +163,6 @@ export function HeroSection() {
                 >
                   Round trip
                 </button>
-              </div>
-
-              {/* Verified Trust Strip */}
-              <div className="hidden items-center gap-2 text-xs font-medium text-muted-foreground sm:flex">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span>Over <strong>120+ Daily Trips</strong> Available</span>
               </div>
             </div>
 

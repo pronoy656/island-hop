@@ -63,28 +63,27 @@ export function FaqSupportBanner() {
       <div className="pointer-events-none absolute -bottom-20 right-1/4 h-[400px] w-[400px] rounded-full bg-indigo-500/10 blur-[130px] -z-10" />
 
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:gap-14">
-          
-          {/* Left Column: Heading & Luxury Island Card with Integrated Concierge */}
-          <div className="space-y-6 lg:col-span-5 lg:sticky lg:top-24">
-            {/* Header */}
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-3.5 py-1 text-xs font-bold tracking-wider text-blue-600 uppercase shadow-xs backdrop-blur-md dark:text-blue-400">
-                <HelpCircle className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                <span>FREQUENTLY ASKED QUESTIONS</span>
-              </div>
-              <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl lg:text-5xl lg:leading-[1.12]">
-                Everything you need <br className="hidden sm:inline" />
-                <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-300 dark:to-sky-300">
-                  to know
-                </span>
-                .
-              </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Got questions before hopping across the islands? Here are quick answers from our 24/7 maritime operations team.
-              </p>
-            </div>
+        {/* Section Header */}
+        <div className="mb-10 max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-3.5 py-1 text-xs font-bold tracking-wider text-blue-600 uppercase shadow-xs backdrop-blur-md dark:text-blue-400">
+            <HelpCircle className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+            <span>FREQUENTLY ASKED QUESTIONS</span>
+          </div>
+          <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl lg:text-5xl lg:leading-[1.12]">
+            Everything you need{" "}
+            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-300 dark:to-sky-300">
+              to know
+            </span>
+            .
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Got questions before hopping across the islands? Here are quick answers from our 24/7 maritime operations team.
+          </p>
+        </div>
 
+        <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-12">
+          {/* Left Column: Luxury Island Card with Integrated Concierge */}
+          <div className="lg:col-span-5 lg:sticky lg:top-24">
             {/* Luxury Showcase Card */}
             <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-card shadow-xl backdrop-blur-xl transition-all duration-300 hover:border-blue-500/40 hover:shadow-2xl">
               {/* Image Container with Gradient Overlay */}
