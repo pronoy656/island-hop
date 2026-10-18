@@ -1,13 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import type { ApiResponse } from "@repo/types";
-
 import { get, post } from "@/lib/api";
 
 import { useAuth } from "@/providers/AuthProvider";
 
-import type { AuthUser, LoginCredentials, SignupCredentials } from "@/types";
+import type { ApiResponse, AuthUser, LoginCredentials, SignupCredentials } from "@/types";
 
 export { useAuth };
 

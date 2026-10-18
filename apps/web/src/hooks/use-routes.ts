@@ -9,7 +9,7 @@ import type {
   IRouteFilterParams,
   IRouteListResponse,
   IUpdateRoutePayload
-} from "@repo/types";
+} from "@/types";
 
 import { del, get, patch, post } from "@/lib/api";
 

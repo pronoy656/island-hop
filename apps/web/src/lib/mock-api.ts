@@ -1,9 +1,7 @@
-import type { ApiResponse } from "@repo/types";
-
 import { cookie } from "@/lib/cookie-client";
 import { sleep } from "@/lib/utils";
 
-import type { AuthUser, LoginCredentials, SignupCredentials } from "@/types";
+import type { ApiResponse, AuthUser, LoginCredentials, SignupCredentials } from "@/types";
 
 const MOCK_USERS_KEY = "islandhop_mock_users";
 

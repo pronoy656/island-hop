@@ -8,7 +8,7 @@ import type {
   IFerryListResponse,
   IFerryStats,
   IUpdateFerryPayload
-} from "@repo/types";
+} from "@/types";
 
 import { del, get, patch, post } from "@/lib/api";
 

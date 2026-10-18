@@ -19,7 +19,7 @@ import type {
   IUpdateFerryPayload,
   VesselStatus,
   VesselType
-} from "@repo/types";
+} from "@/types";
 import {
   useCreateFerryMutation,
   useDebounce,

@@ -31,7 +31,7 @@ import {
   TabsTrigger
 } from "@/ui";
 import { DashboardTableCard, StatusBadge, type TableColumn } from "@/widgets";
-import type { IAdminProviderItem } from "@repo/types";
+import type { IAdminProviderItem } from "@/types";
 
 const PAGE_SIZE_OPTIONS = [
   { value: "10", label: "10 per page" },

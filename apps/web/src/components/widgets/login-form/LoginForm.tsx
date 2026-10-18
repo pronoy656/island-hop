@@ -17,7 +17,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { loginSchema, type LoginInput } from "@repo/validators";
+import { loginSchema, type LoginInput } from "@/schemas";
 import { toast } from "sonner";
 
 import { useLoginMutation } from "@/hooks";

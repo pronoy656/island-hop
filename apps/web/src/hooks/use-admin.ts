@@ -7,7 +7,7 @@ import type {
   IAdminProviderItem,
   IProviderStatusUpdatePayload,
   ProviderFilterParams
-} from "@repo/types";
+} from "@/types";
 
 import { del, get, patch, post } from "@/lib/api";
 

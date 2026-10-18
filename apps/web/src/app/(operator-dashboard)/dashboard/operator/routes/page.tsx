@@ -21,7 +21,7 @@ import type {
   IPort,
   IRoute,
   RouteStatus
-} from "@repo/types";
+} from "@/types";
 import {
   useCreateRouteMutation,
   useDeleteRouteMutation,
