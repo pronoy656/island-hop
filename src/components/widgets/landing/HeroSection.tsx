@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import { PassengerSelector } from "@/components/widgets/booking/PassengerSelector";
 import { PortCombobox } from "@/components/widgets/booking/PortCombobox";
 import {
-  Button,
   Card,
   CardContent,
   DatePicker,
@@ -162,8 +161,8 @@ export function HeroSection() {
 
             {/* Form Fields Responsive Grid */}
             <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-              {/* FROM & TO ROUTE GROUP (Spans full width on tablet, 6 cols on desktop) */}
-              <div className="sm:col-span-2 lg:col-span-6">
+              {/* FROM & TO ROUTE GROUP (Spans full width on tablet, 5 cols on desktop) */}
+              <div className="sm:col-span-2 lg:col-span-5">
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
                   {/* FROM */}
                   <div className="space-y-1.5">
@@ -179,18 +178,16 @@ export function HeroSection() {
                     />
                   </div>
 
-                  {/* DESKTOP/TABLET SWAP BUTTON (Nestled cleanly between From & To) */}
-                  <div className="hidden sm:flex sm:items-center sm:justify-center sm:pb-0.5">
-                    <Button
+                  {/* DESKTOP/TABLET SWAP BUTTON (Sleek circular floating button between From & To) */}
+                  <div className="hidden sm:flex sm:items-center sm:justify-center sm:pb-1">
+                    <button
                       type="button"
-                      variant="outline"
-                      size="icon"
                       onClick={handleSwapPorts}
                       title="Swap departure and destination"
-                      className="border-input bg-background/90 hover:bg-muted text-muted-foreground hover:text-blue-600 h-11 w-10 shrink-0 rounded-xl transition-all duration-300 hover:rotate-180 dark:hover:text-blue-400"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-card text-muted-foreground shadow-2xs transition-all duration-300 hover:rotate-180 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 active:scale-90 cursor-pointer"
                     >
-                      <ArrowUpDown className="h-4 w-4" />
-                    </Button>
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                    </button>
                   </div>
 
                   {/* MOBILE SWAP BUTTON (Centered pill between stacked From & To fields) */}
@@ -198,7 +195,7 @@ export function HeroSection() {
                     <button
                       type="button"
                       onClick={handleSwapPorts}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/95 px-3 py-1 text-[11px] font-bold text-muted-foreground hover:border-blue-500 hover:text-blue-600 active:scale-95 shadow-2xs transition-all"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/95 px-3 py-1 text-[11px] font-bold text-muted-foreground hover:border-blue-500 hover:text-blue-600 active:scale-95 shadow-2xs transition-all cursor-pointer"
                     >
                       <ArrowUpDown className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                       <span>Swap Direction</span>
@@ -252,20 +249,18 @@ export function HeroSection() {
               </div>
 
               {/* SEARCH FERRIES ACTION BUTTON */}
-              <div className="pt-1 sm:col-span-2 sm:pt-0 lg:col-span-2">
-                <Button
-                  size="lg"
-                  className="group relative h-11 w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-xs font-bold text-white shadow-md shadow-blue-600/25 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.99]"
-                  asChild
+              <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
+                {/* Desktop alignment spacer matching label height */}
+                <div className="hidden lg:flex items-center text-[10px] font-extrabold uppercase invisible select-none">
+                  <span>SEARCH</span>
+                </div>
+                <Link
+                  href={`/book?tripType=${encodeURIComponent(tripType)}&from=${encodeURIComponent(departurePort)}&to=${encodeURIComponent(destinationPort)}&departureDate=${encodeURIComponent(departureDate)}&passengers=${encodeURIComponent(passengersParam)}&adults=${adults}&children=${childrenCount}`}
+                  className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-600/25 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.98] cursor-pointer whitespace-nowrap"
                 >
-                  <Link
-                    href={`/book?tripType=${encodeURIComponent(tripType)}&from=${encodeURIComponent(departurePort)}&to=${encodeURIComponent(destinationPort)}&departureDate=${encodeURIComponent(departureDate)}&passengers=${encodeURIComponent(passengersParam)}&adults=${adults}&children=${childrenCount}`}
-                    className="flex h-full w-full items-center justify-center gap-2 whitespace-nowrap"
-                  >
-                    <span>Search Ferries</span>
-                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                  </Link>
-                </Button>
+                  <span>Search Ferries</span>
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
               </div>
             </div>
           </CardContent>
