@@ -16,9 +16,9 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
-      return cookie.get("accessToken") || "mock-jwt-token-usr_operator_01";
+      return cookie.get("accessToken") || null;
     }
-    return "mock-jwt-token-usr_operator_01";
+    return null;
   });
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);

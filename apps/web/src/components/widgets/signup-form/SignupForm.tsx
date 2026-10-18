@@ -47,18 +47,32 @@ import {
 
 type UserRole = "passenger" | "operator";
 
+// Phone and Password requirements matching backend
+const phoneRegex = /^\+?[0-9]{7,15}$/;
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}\[\]|;:'",.<>/?]).{8,}$/;
+
 // Schemas
 const passengerPersonalSchema = z.object({
   name: z.string().min(2, "Full name must be at least 2 characters")
 });
 const passengerContactSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(6, "Please enter a valid phone number")
+  phone: z
+    .string()
+    .min(7, "Phone number must be at least 7 digits")
+    .regex(phoneRegex, "Phone must be valid digits (e.g. +8801712345678 or 01712345678)")
 });
 const passengerSecuritySchema = z
   .object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Password must be at least 6 characters")
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .regex(
+        passwordRegex,
+        "Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol"
+      ),
+    confirmPassword: z.string().min(8, "Confirm password is required")
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -71,12 +85,21 @@ const operatorCompanySchema = z.object({
 });
 const operatorContactSchema = z.object({
   email: z.string().email("Please enter a valid business email address"),
-  phone: z.string().min(6, "Please enter a valid business phone number")
+  phone: z
+    .string()
+    .min(7, "Business phone must be at least 7 digits")
+    .regex(phoneRegex, "Phone must be valid digits (e.g. +8801712345678 or 01712345678)")
 });
 const operatorSecuritySchema = z
   .object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Password must be at least 6 characters")
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .regex(
+        passwordRegex,
+        "Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol"
+      ),
+    confirmPassword: z.string().min(8, "Confirm password is required")
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -363,6 +386,9 @@ function SecurityStepForm({
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p className="text-muted-foreground text-[11px] pt-1">
+                Must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special symbol (e.g. Test@1234).
+              </p>
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -481,19 +507,28 @@ export function SignupForm() {
       password: securityData.password
     };
 
+    const roleUpper = role === "operator" ? "OPERATOR" : "USER";
+
     signupMutation.mutate(
       {
+        role: roleUpper,
         name: finalData.name || "",
         email: finalData.email || "",
-        password: finalData.password || ""
+        password: finalData.password || "",
+        phoneNumber: finalData.phone || "",
+        phone: finalData.phone || "",
+        companyName: role === "operator" ? finalData.companyName || "" : undefined,
+        contactPersonName: role === "operator" ? finalData.name || "" : undefined
       },
       {
         onSuccess: () => {
           setIsSubmitted(true);
           setCompletedSteps((prev) => ({ ...prev, security: true }));
           setTimeout(() => {
-            router.push(`/login?role=${role}`);
-          }, 1200);
+            router.push(
+              `/verify-email?email=${encodeURIComponent(finalData.email || "")}&role=${role}`
+            );
+          }, 1000);
         }
       }
     );
@@ -509,7 +544,7 @@ export function SignupForm() {
           className="border-primary/30 bg-primary/10 text-primary w-fit text-[11px] font-bold tracking-wider uppercase"
         >
           <span className="bg-primary mr-1.5 inline-block h-2 w-2 rounded-full" />
-          {role === "operator" ? "FERRY PROVIDER" : "PASSENGER"}
+          {role === "operator" ? "FERRY OPERATOR" : "PASSENGER"}
         </Badge>
 
         {/* Role Toggle Switcher */}
@@ -543,7 +578,7 @@ export function SignupForm() {
         {/* Titles */}
         <div className="space-y-1">
           <h2 className="text-foreground text-2xl font-black tracking-tight sm:text-3xl">
-            {role === "operator" ? "Create your provider account" : "Create your passenger account"}
+            {role === "operator" ? "Create your operator account" : "Create your passenger account"}
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">
             {role === "operator"

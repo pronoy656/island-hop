@@ -9,18 +9,16 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  KeyRound,
   Loader2,
   Lock,
   Mail,
-  Ship,
-  Sparkles,
-  User
+  Sparkles
 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { loginSchema, type LoginInput } from "@repo/validators";
+import { toast } from "sonner";
 
 import { useLoginMutation } from "@/hooks";
 
@@ -35,66 +33,64 @@ import {
   Input
 } from "@/ui";
 
-type UserRole = "passenger" | "operator";
-
-const DEMO_CREDENTIALS: Record<UserRole, { email: string; pass: string; label: string }> = {
-  passenger: {
-    email: "jane@islandhop.com",
-    pass: "123456",
-    label: "Passenger Demo"
-  },
-  operator: {
-    email: "operator@islandhop.com",
-    pass: "123456",
-    label: "Ferry Operator Demo"
-  }
-};
+const DEMO_ACCOUNTS = [
+  { label: "Passenger", email: "user001@testmail.com", pass: "Password123!" },
+  { label: "Operator", email: "khaledahmednayeem.dev@gmail.com", pass: "Test@123" },
+  { label: "Admin", email: "admin@example.com", pass: "strong_password_here" }
+];
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [role, setRole] = useState<UserRole>("passenger");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
-  const from = searchParams.get("from") || (role === "operator" ? "/dashboard" : "/");
   const loginMutation = useLoginMutation();
 
+  const defaultEmail = searchParams.get("email") || "";
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      email: defaultEmail,
       password: ""
     }
   });
 
-  const handleRoleChange = (newRole: UserRole) => {
-    setRole(newRole);
-    form.reset({
-      email: "",
-      password: ""
-    });
+  const getDestination = (resUserRole?: string) => {
+    const fromParam = searchParams.get("redirect") || searchParams.get("from");
+    if (fromParam) return fromParam;
+    const normalizedRole = (resUserRole || "").toLowerCase();
+    if (normalizedRole === "admin" || normalizedRole === "super_admin") {
+      return "/dashboard/admin";
+    }
+    if (normalizedRole === "operator") {
+      return "/dashboard/operator/ferries";
+    }
+    return "/";
   };
 
-  const handleFillAndSubmitDemo = () => {
-    const creds = DEMO_CREDENTIALS[role];
-    form.setValue("email", creds.email, { shouldValidate: true });
-    form.setValue("password", creds.pass, { shouldValidate: true });
-
-    loginMutation.mutate(
-      { email: creds.email, password: creds.pass },
-      {
-        onSuccess: () => {
-          router.push(from);
-        }
-      }
-    );
+  const handleFillDemo = (email: string, pass: string) => {
+    form.setValue("email", email, { shouldValidate: true });
+    form.setValue("password", pass, { shouldValidate: true });
   };
 
   const onSubmit = (values: LoginInput) => {
     loginMutation.mutate(values, {
-      onSuccess: () => {
-        router.push(from);
+      onSuccess: (res) => {
+        router.push(getDestination(res?.data?.user?.role));
+      },
+      onError: (err: Error) => {
+        if (err.message?.toLowerCase().includes("verify your email")) {
+          toast.error("Please verify your email before signing in.", {
+            action: {
+              label: "Verify OTP",
+              onClick: () =>
+                router.push(
+                  `/verify-email?email=${encodeURIComponent(values.email)}`
+                )
+            }
+          });
+        }
       }
     });
   };
@@ -103,7 +99,7 @@ export function LoginForm() {
     <div className="w-full space-y-6">
       {/* Top Header & Brand */}
       <div className="space-y-4">
-        {/* Brand with Badge for Desktop */}
+        {/* Brand for Desktop */}
         <div className="hidden items-center gap-3 lg:flex">
           <div className="bg-primary text-primary-foreground flex h-9 w-9 items-center justify-center rounded-xl shadow-md">
             <Anchor className="h-5 w-5" />
@@ -111,75 +107,44 @@ export function LoginForm() {
           <div>
             <div className="text-foreground text-lg font-black tracking-tight">IslandHop</div>
             <div className="text-primary text-[10px] font-extrabold tracking-wider uppercase">
-              {role === "operator" ? "PROVIDER PORTAL" : "PASSENGER PORTAL"}
+              SECURE PORTAL
             </div>
           </div>
         </div>
 
-        {/* Role Toggle Switcher */}
-        <div className="bg-muted/60 border-border flex rounded-xl border p-1">
-          <button
-            type="button"
-            onClick={() => handleRoleChange("passenger")}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold transition-all ${
-              role === "passenger"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <User className="h-3.5 w-3.5" />
-            Passenger
-          </button>
-          <button
-            type="button"
-            onClick={() => handleRoleChange("operator")}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold transition-all ${
-              role === "operator"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Ship className="h-3.5 w-3.5" />
-            Ferry Operator
-          </button>
-        </div>
-
-        {/* Dynamic Titles */}
-        <div className="space-y-1 pt-2">
+        {/* Unified Titles */}
+        <div className="space-y-1">
           <h2 className="text-foreground text-2xl font-black tracking-tight sm:text-3xl">
             Welcome back
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            {role === "operator"
-              ? "Sign in to manage your ferries, routes, schedules, bookings, and passenger operations."
-              : "Sign in to view your tickets, manage bookings, and enjoy easy ferry travel."}
+            Sign in with your email to access your bookings, tickets, or management dashboard.
           </p>
         </div>
       </div>
 
-      {/* Demo Credentials Quick Fill Action */}
-      <div className="border-primary/20 bg-primary/5 rounded-xl border p-3.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="space-y-0.5">
-            <div className="text-primary flex items-center gap-1.5 text-xs font-bold">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>{DEMO_CREDENTIALS[role].label}</span>
-            </div>
-            <div className="text-muted-foreground font-mono text-[11px]">
-              {DEMO_CREDENTIALS[role].email} &bull; {DEMO_CREDENTIALS[role].pass}
-            </div>
+      {/* Demo Credentials Quick Fill Pills */}
+      <div className="border-border/60 bg-muted/40 rounded-xl border p-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span>Quick Demo:</span>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={handleFillAndSubmitDemo}
-            disabled={loginMutation.isPending}
-            className="border-primary/30 hover:bg-primary hover:text-primary-foreground h-8 text-xs font-bold transition-all"
-          >
-            <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-            1-Click Demo
-          </Button>
+          <div className="flex flex-wrap gap-1.5">
+            {DEMO_ACCOUNTS.map((acc) => (
+              <Button
+                key={acc.label}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => handleFillDemo(acc.email, acc.pass)}
+                disabled={loginMutation.isPending}
+                className="h-7 px-2.5 text-[11px] font-medium"
+              >
+                {acc.label}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -287,8 +252,8 @@ export function LoginForm() {
 
       {/* Switch to Signup */}
       <div className="text-muted-foreground pt-2 text-center text-xs">
-        {role === "operator" ? "Don't have a provider account? " : "Don't have an account? "}
-        <Link href={`/signup?role=${role}`} className="text-primary font-bold hover:underline">
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className="text-primary font-bold hover:underline">
           Create Account
         </Link>
       </div>

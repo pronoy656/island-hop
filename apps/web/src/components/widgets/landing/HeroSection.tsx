@@ -32,13 +32,6 @@ import {
 } from "@/ui";
 import { cn } from "@/lib/utils";
 
-const QUICK_ROUTES = [
-  { from: "Malé (Villingili Terminal)", to: "Maafushi Island Port", label: "Malé ⇄ Maafushi" },
-  { from: "Malé (Villingili Terminal)", to: "Thulusdhoo Island Port", label: "Malé ⇄ Thulusdhoo" },
-  { from: "Malé (Villingili Terminal)", to: "Dhiffushi Port", label: "Malé ⇄ Dhiffushi" },
-  { from: "Malé (Villingili Terminal)", to: "Gulhi Harbor", label: "Malé ⇄ Gulhi" }
-];
-
 export function HeroSection() {
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
   const [departurePort, setDeparturePort] = useState("Malé (Villingili Terminal)");
@@ -50,11 +43,6 @@ export function HeroSection() {
     const temp = departurePort;
     setDeparturePort(destinationPort);
     setDestinationPort(temp);
-  };
-
-  const handleQuickRouteSelect = (from: string, to: string) => {
-    setDeparturePort(from);
-    setDestinationPort(to);
   };
 
   return (
@@ -266,23 +254,6 @@ export function HeroSection() {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Quick Route Shortcut Chips */}
-            <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3 text-xs">
-              <span className="font-extrabold uppercase tracking-wider text-[10px] text-muted-foreground">
-                Popular Quick Routes:
-              </span>
-              {QUICK_ROUTES.map((route) => (
-                <button
-                  key={route.label}
-                  type="button"
-                  onClick={() => handleQuickRouteSelect(route.from, route.to)}
-                  className="rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] font-semibold text-foreground/80 transition-colors hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  {route.label}
-                </button>
-              ))}
             </div>
           </CardContent>
         </Card>

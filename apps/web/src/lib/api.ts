@@ -5,11 +5,11 @@ import { env } from "@/env";
 import { cookie } from "@/lib/cookie-client";
 import { mockApi } from "@/lib/mock-api";
 
-// Toggle mock mode; set to true for complete frontend-only operation
-export const USE_MOCK_API = true;
+// Toggle mock mode; set to false for real live backend operation
+export const USE_MOCK_API = false;
 
 export const api = axios.create({
-  baseURL: env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || env.NEXT_PUBLIC_API_URL || "http://localhost:5003/api/v1",
   timeout: 15_000,
   headers: {
     "Content-Type": "application/json",
@@ -29,13 +29,44 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (res) => res,
-  (err: AxiosError<{ message?: string; errorMessages?: Array<{ message: string }> }>) => {
+  (err: AxiosError<{ message?: string; errorMessages?: Array<{ message: string; path?: string }> }>) => {
+    // Ignore intentionally canceled/aborted requests (React 19 lifecycle cleanup & React Query signal)
+    if (axios.isCancel(err)) {
+      return Promise.reject(err);
+    }
+
     if (axios.isAxiosError(err)) {
+      const status = err.response?.status;
+      const method = err.config?.method?.toUpperCase() || "REQUEST";
+      const url = err.config?.url || "";
+      const firstDetail = err.response?.data?.errorMessages?.[0]?.message;
+      const mainMessage = err.response?.data?.message;
       const serverMessage =
-        err.response?.data?.message ||
-        err.response?.data?.errorMessages?.[0]?.message ||
-        err.message ||
-        "An unexpected network error occurred";
+        (firstDetail && (mainMessage === "Validation Error" || !mainMessage))
+          ? firstDetail
+          : mainMessage || firstDetail || err.message || "An unexpected network error occurred";
+
+      // Detailed console error logging ONLY for genuine server/network errors
+      console.error(
+        `🚨 [API Error ${status || "Network"}]: ${method} ${url}\n` +
+        `• Server Message: ${serverMessage}\n` +
+        `• Details:`,
+        err.response?.data ?? err.message
+      );
+
+      // Handle 401 Unauthorized (Expired or Missing Token)
+      if (status === 401 && typeof window !== "undefined") {
+        cookie.remove("accessToken");
+        const pathname = window.location.pathname;
+        if (
+          !pathname.startsWith("/login") &&
+          !pathname.startsWith("/signup") &&
+          !pathname.startsWith("/verify-email")
+        ) {
+          window.location.href = `/login?redirect=${encodeURIComponent(pathname)}`;
+        }
+      }
+
       return Promise.reject(new Error(serverMessage));
     }
     return Promise.reject(err);

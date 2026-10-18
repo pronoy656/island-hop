@@ -2,31 +2,62 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ADMIN_DASHBOARD_DATA, type RecentProviderItem } from "@/data";
+import { AlertCircle, RefreshCw } from "lucide-react";
+
+import { useAdminProvidersQuery } from "@/hooks/use-admin";
+import { Button, Tabs, TabsList, TabsTrigger } from "@/ui";
 import { DashboardTableCard, StatusBadge, type TableColumn } from "@/widgets";
-import { Tabs, TabsList, TabsTrigger } from "@/ui";
+
+interface ProviderRowItem {
+  id: string;
+  provider: string;
+  contactPerson: string;
+  totalFerries: number;
+  status: "Active" | "Suspended" | "Pending" | string;
+  email?: string;
+  routesCount?: number;
+}
 
 export default function AdminProvidersPage() {
   const [activeTab, setActiveTab] = React.useState<string>("all");
-  const { recentProviders, summaryStats } = ADMIN_DASHBOARD_DATA;
 
-  // Filter providers based on active tab
-  const filteredProviders = React.useMemo(() => {
-    if (activeTab === "active") {
-      return recentProviders.filter((p) => p.status === "Active");
-    }
-    if (activeTab === "suspended") {
-      return recentProviders.filter((p) => p.status === "Suspended");
-    }
-    return recentProviders;
-  }, [recentProviders, activeTab]);
+  const statusParam =
+    activeTab === "active" ? "ACTIVE" : activeTab === "suspended" ? "SUSPENDED" : undefined;
 
-  const activeCount = recentProviders.filter((p) => p.status === "Active").length;
-  const suspendedCount = recentProviders.filter((p) => p.status === "Suspended").length;
+  const { data, isLoading, isError, error, refetch } = useAdminProvidersQuery(
+    statusParam ? { status: statusParam } : undefined
+  );
 
-  const providerColumns: TableColumn<RecentProviderItem>[] = [
+  const providers = data?.providers ?? [];
+
+  const providerRows: ProviderRowItem[] = React.useMemo(() => {
+    return providers.map((p) => {
+      const userStatus = p.user?.status;
+      const formattedStatus =
+        userStatus === "ACTIVE"
+          ? "Active"
+          : userStatus === "SUSPENDED"
+            ? "Suspended"
+            : userStatus || "Active";
+
+      return {
+        id: p.id,
+        provider: p.companyName,
+        contactPerson: p.contactPersonName || p.user?.name || "N/A",
+        totalFerries: p.ferriesCount ?? 0,
+        status: formattedStatus,
+        email: p.user?.email,
+        routesCount: p.routesCount ?? 0
+      };
+    });
+  }, [providers]);
+
+  const activeCount = providers.filter((p) => p.user?.status === "ACTIVE").length;
+  const suspendedCount = providers.filter((p) => p.user?.status === "SUSPENDED").length;
+
+  const providerColumns: TableColumn<ProviderRowItem>[] = [
     {
-      header: "PROVIDER",
+      header: "OPERATOR",
       accessorKey: "provider",
       className: "font-semibold text-foreground"
     },
@@ -51,19 +82,19 @@ export default function AdminProvidersPage() {
       headerClassName: "text-right",
       cell: (item) => (
         <Link
-          href={`/admin/providers/${item.id}`}
+          href={`/dashboard/admin/providers/${item.id}`}
           className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold hover:underline transition-colors"
         >
-          View Provider
+          View Operator
         </Link>
       )
     }
   ];
 
   const getTableTitle = () => {
-    if (activeTab === "active") return `Active Providers (${activeCount})`;
-    if (activeTab === "suspended") return `Suspended Providers (${suspendedCount})`;
-    return `All Registered Providers (${recentProviders.length})`;
+    if (activeTab === "active") return `Active Operators (${activeCount})`;
+    if (activeTab === "suspended") return `Suspended Operators (${suspendedCount})`;
+    return `All Registered Operators (${providers.length})`;
   };
 
   return (
@@ -71,18 +102,31 @@ export default function AdminProvidersPage() {
       {/* Page Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Providers
+          Operators
         </h1>
         <p className="text-muted-foreground text-xs sm:text-sm">
-          Manage registered ferry operators and provider fleets ({summaryStats.totalProviders} active providers).
+          Manage registered commercial ferry operators and fleet vessels ({data?.meta?.total ?? providers.length} registered operators).
         </p>
       </div>
 
-      {/* Shadcn Tabs: All, Active, Suspended */}
+      {isError && (
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-6 text-center space-y-3">
+          <AlertCircle className="mx-auto h-8 w-8 text-destructive" />
+          <h2 className="text-base font-bold text-foreground">Failed to Load Registered Operators</h2>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
+            {error?.message || "Could not retrieve operator list from the server."}
+          </p>
+          <Button onClick={() => refetch()} variant="outline" size="sm" className="gap-2">
+            <RefreshCw className="h-4 w-4" /> Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* Tabs: All, Active, Suspended */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
         <TabsList className="h-10 p-1 bg-muted/80">
           <TabsTrigger value="all" className="px-4 py-1.5 text-xs font-semibold">
-            All ({recentProviders.length})
+            All ({providers.length})
           </TabsTrigger>
           <TabsTrigger value="active" className="px-4 py-1.5 text-xs font-semibold">
             Active ({activeCount})
@@ -92,14 +136,24 @@ export default function AdminProvidersPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Providers Table Card */}
-        <DashboardTableCard
-          title={getTableTitle()}
-          columns={providerColumns}
-          data={filteredProviders}
-          keyExtractor={(item) => item.id}
-          emptyMessage={`No ${activeTab} providers found.`}
-        />
+        {/* Loading Skeleton */}
+        {isLoading ? (
+          <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-6 animate-pulse">
+            <div className="h-6 w-48 rounded bg-muted/60 mb-6" />
+            <div className="h-12 w-full rounded bg-muted/40" />
+            <div className="h-12 w-full rounded bg-muted/40" />
+            <div className="h-12 w-full rounded bg-muted/40" />
+          </div>
+        ) : (
+          /* Providers Table Card */
+          <DashboardTableCard
+            title={getTableTitle()}
+            columns={providerColumns}
+            data={providerRows}
+            keyExtractor={(item) => item.id}
+            emptyMessage={`No ${activeTab !== "all" ? activeTab : "registered"} operators found.`}
+          />
+        )}
       </Tabs>
     </div>
   );

@@ -99,7 +99,7 @@ export function FerryDetailsModal({ ferry, open, onOpenChange }: FerryDetailsMod
             <div className="flex items-center justify-between pb-3">
               <span className="text-muted-foreground flex items-center gap-2">
                 <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                Operating Provider:
+                Ferry Operator:
               </span>
               <span className="font-bold text-foreground">
                 {ferry.providerName || "Island Ferry Co."}

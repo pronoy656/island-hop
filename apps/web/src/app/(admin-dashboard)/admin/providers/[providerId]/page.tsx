@@ -12,8 +12,8 @@ export async function generateMetadata({
 }: ProviderDetailPageProps): Promise<Metadata> {
   const { providerId } = await params;
   return {
-    title: `Provider Details (${providerId}) | FerryGo Admin`,
-    description: "Manage provider fleet, route schedules, revenue splits, and account status."
+    title: `Operator Details (${providerId}) | FerryGo Admin`,
+    description: "Manage operator fleet, route schedules, revenue splits, and account status."
   };
 }
 

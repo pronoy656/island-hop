@@ -76,7 +76,7 @@ export default function AuthenticationLayout({ children }: { children: ReactNode
             Terms of Service
           </Link>
           <Link href="/help" className="hover:text-foreground transition-colors">
-            Provider Support
+            Operator Support
           </Link>
         </div>
       </div>

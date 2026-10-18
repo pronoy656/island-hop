@@ -13,9 +13,14 @@ export interface LoginCredentials {
 }
 
 export interface SignupCredentials {
-  name: string;
+  name?: string;
   email: string;
   password: string;
+  role?: "USER" | "OPERATOR" | string;
+  phone?: string;
+  phoneNumber?: string;
+  companyName?: string;
+  contactPersonName?: string;
 }
 
 export interface AuthResponseData {

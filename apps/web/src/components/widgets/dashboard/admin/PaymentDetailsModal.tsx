@@ -107,7 +107,7 @@ export function PaymentDetailsModal({
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
                 <div>
-                  <p className="text-[10px] text-muted-foreground">Ferry Provider</p>
+                  <p className="text-[10px] text-muted-foreground">Ferry Operator</p>
                   <p className="font-semibold text-foreground">{payment.provider}</p>
                 </div>
               </div>
@@ -157,7 +157,7 @@ export function PaymentDetailsModal({
               <div className="flex items-center justify-between pt-2">
                 <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
                   <CreditCard className="h-3.5 w-3.5" />
-                  Provider Net Payout (90%):
+                  Operator Net Payout (90%):
                 </span>
                 <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
                   ${payment.providerAmount.toFixed(2)}

@@ -27,7 +27,7 @@ export function AdminHeader({
       return "Overview";
     }
     if (pathname.startsWith("/dashboard/admin/providers") || pathname.startsWith("/admin/providers"))
-      return "Providers Management";
+      return "Operators Management";
     if (pathname.startsWith("/dashboard/admin/bookings") || pathname.startsWith("/admin/bookings"))
       return "Bookings Management";
     if (pathname.startsWith("/dashboard/admin/payments") || pathname.startsWith("/admin/payments"))

@@ -32,7 +32,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     exact: false
   },
   {
-    name: "Providers",
+    name: "Operators",
     href: "/dashboard/admin/providers",
     icon: Building2
   },

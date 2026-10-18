@@ -40,6 +40,7 @@ export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
     normalizedStatus === "on time" ||
     normalizedStatus === "scheduled" ||
     normalizedStatus === "in service" ||
+    normalizedStatus === "in_service" ||
     normalizedStatus === "boarded"
   ) {
     colorClasses =
@@ -48,7 +49,9 @@ export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
     normalizedStatus === "cancelled" ||
     normalizedStatus === "failed" ||
     normalizedStatus === "rejected" ||
-    normalizedStatus === "delayed"
+    normalizedStatus === "delayed" ||
+    normalizedStatus === "out of service" ||
+    normalizedStatus === "out_of_service"
   ) {
     colorClasses =
       "bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60";
