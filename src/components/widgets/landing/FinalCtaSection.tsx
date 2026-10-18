@@ -33,6 +33,8 @@ export function FinalCtaSection() {
           src={ctaBg}
           alt="IslandHop tropical ocean background"
           fill
+          priority
+          sizes="100vw"
           className="object-cover object-center"
         />
       </div>
