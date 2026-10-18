@@ -4,15 +4,19 @@ import { Anchor, ArrowRight, ArrowUpDown, Calendar, MapPin, Users } from "lucide
 import { useQueryStates } from "nuqs";
 
 import { bookingSearchParamsParsers } from "@/schemas/booking-params";
+import { cn } from "@/lib/utils";
+import { Button, Card, CardContent, DatePicker, Label } from "@/ui";
 
-import { Button, Card, CardContent, Input, Label } from "@/ui";
-
+import { PassengerSelector } from "./PassengerSelector";
 import { PortCombobox } from "./PortCombobox";
 
 export function BookingSearchFilterBar() {
   const [params, setParams] = useQueryStates(bookingSearchParamsParsers, {
     shallow: false
   });
+
+  const adults = parseInt(params.adults || "1", 10) || 1;
+  const childrenCount = parseInt(params.children || "0", 10) || 0;
 
   const handleSwapPorts = () => {
     void setParams({
@@ -21,37 +25,74 @@ export function BookingSearchFilterBar() {
     });
   };
 
+  const handlePassengersChange = ({
+    adults: nextAdults,
+    children: nextChildren
+  }: {
+    adults: number;
+    children: number;
+  }) => {
+    const total = nextAdults + nextChildren;
+    const text = `${total} ${total === 1 ? "Passenger" : "Passengers"}`;
+    void setParams({
+      adults: String(nextAdults),
+      children: String(nextChildren),
+      passengers: text
+    });
+  };
+
+  const handleSearch = () => {
+    void setParams({
+      tripType: params.tripType,
+      from: params.from,
+      to: params.to,
+      departureDate: params.departureDate,
+      adults: String(adults),
+      children: String(childrenCount),
+      passengers: params.passengers
+    });
+  };
+
   return (
-    <Card className="border-border bg-card/95 rounded-2xl p-6 shadow-2xl backdrop-blur-md sm:p-7">
-      <CardContent className="p-0">
-        {/* Trip Type Pills */}
-        <div className="mb-5 flex items-center gap-2">
-          <Button
-            type="button"
-            variant={params.tripType === "one-way" ? "default" : "secondary"}
-            size="sm"
-            onClick={() => void setParams({ tripType: "one-way" })}
-            className="h-8 rounded-full px-5 text-xs font-bold"
-          >
-            One way
-          </Button>
-          <Button
-            type="button"
-            variant={params.tripType === "round-trip" ? "default" : "secondary"}
-            size="sm"
-            onClick={() => void setParams({ tripType: "round-trip" })}
-            className="h-8 rounded-full px-5 text-xs font-bold"
-          >
-            Round trip
-          </Button>
+    <Card className="border-border/80 bg-card/95 rounded-2xl p-4 shadow-2xl shadow-slate-950/10 backdrop-blur-xl transition-all sm:p-6 lg:p-7">
+      <CardContent className="space-y-4 p-0">
+        {/* Trip Type Segmented Pills */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="border-border/60 bg-muted/60 inline-flex items-center gap-1 rounded-full border p-1 backdrop-blur-xs">
+            <button
+              type="button"
+              onClick={() => void setParams({ tripType: "one-way" })}
+              className={cn(
+                "cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold transition-all duration-200 sm:px-5",
+                params.tripType === "one-way"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+              )}
+            >
+              One way
+            </button>
+            <button
+              type="button"
+              onClick={() => void setParams({ tripType: "round-trip" })}
+              className={cn(
+                "cursor-pointer rounded-full px-4 py-1.5 text-xs font-bold transition-all duration-200 sm:px-5",
+                params.tripType === "round-trip"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+              )}
+            >
+              Round trip
+            </button>
+          </div>
         </div>
 
-        {/* Form Fields Row */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-          {/* FROM */}
-          <div className="space-y-1.5 lg:col-span-3">
-            <Label className="text-muted-foreground text-[10px] font-extrabold tracking-wider uppercase">
-              FROM
+        {/* Form Fields Responsive 5-Column Grid */}
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-[1.3fr_1.3fr_1fr_1fr_1.1fr] lg:items-end">
+          {/* FROM (DEPARTURE) */}
+          <div className="relative min-w-0 space-y-1.5 sm:col-span-1">
+            <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
+              <MapPin className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+              <span>FROM (DEPARTURE)</span>
             </Label>
             <PortCombobox
               value={params.from}
@@ -59,26 +100,37 @@ export function BookingSearchFilterBar() {
               placeholder="Departure port"
               icon={MapPin}
             />
+
+            {/* Floating Swap Button on tablet/desktop centered between From & To */}
+            <div className="hidden sm:flex absolute -right-4.5 bottom-1.5 z-20">
+              <button
+                type="button"
+                onClick={handleSwapPorts}
+                title="Swap departure and destination"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-border/80 bg-background text-muted-foreground shadow-xs transition-all duration-300 hover:rotate-180 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 active:scale-90 cursor-pointer"
+              >
+                <ArrowUpDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
 
-          {/* SWAP BUTTON */}
-          <div className="hidden lg:col-span-1 lg:flex lg:items-center lg:justify-center lg:pb-1">
-            <Button
+          {/* MOBILE SWAP BUTTON (Centered pill between stacked From & To fields on mobile only) */}
+          <div className="flex justify-center -my-1 sm:hidden">
+            <button
               type="button"
-              variant="outline"
-              size="icon"
               onClick={handleSwapPorts}
-              title="Swap ports"
-              className="border-border bg-background text-muted-foreground hover:text-primary h-8 w-8 rounded-full shadow-xs transition-transform hover:scale-110"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/95 px-3 py-1 text-[11px] font-bold text-muted-foreground hover:border-blue-500 hover:text-blue-600 active:scale-95 shadow-2xs transition-all cursor-pointer"
             >
-              <ArrowUpDown className="h-3.5 w-3.5" />
-            </Button>
+              <ArrowUpDown className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+              <span>Swap Direction</span>
+            </button>
           </div>
 
-          {/* TO */}
-          <div className="space-y-1.5 lg:col-span-3">
-            <Label className="text-muted-foreground text-[10px] font-extrabold tracking-wider uppercase">
-              TO
+          {/* TO (DESTINATION) */}
+          <div className="min-w-0 space-y-1.5 sm:col-span-1">
+            <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
+              <Anchor className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+              <span>TO (DESTINATION)</span>
             </Label>
             <PortCombobox
               value={params.to}
@@ -88,58 +140,47 @@ export function BookingSearchFilterBar() {
             />
           </div>
 
-          {/* DEPARTURE */}
-          <div className="space-y-1.5 lg:col-span-2">
-            <Label className="text-muted-foreground text-[10px] font-extrabold tracking-wider uppercase">
-              DEPARTURE
+          {/* TRAVEL DATE */}
+          <div className="min-w-0 space-y-1.5 sm:col-span-1">
+            <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
+              <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+              <span>TRAVEL DATE</span>
             </Label>
-            <div className="border-input bg-muted/40 focus-within:border-ring flex h-11 items-center gap-2 rounded-xl border px-3.5 transition-colors">
-              <Calendar className="text-muted-foreground h-4 w-4 shrink-0" />
-              <Input
-                type="date"
-                value={params.departureDate}
-                onChange={(e) => void setParams({ departureDate: e.target.value })}
-                className="text-foreground h-auto border-0 bg-transparent p-0 text-xs font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
+            <DatePicker
+              value={params.departureDate}
+              onChange={(val) => void setParams({ departureDate: val })}
+              placeholder="Departure date"
+              className="border-input bg-muted/40 hover:bg-muted/60 text-foreground h-11 w-full rounded-xl px-3.5 text-xs font-bold shadow-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
           </div>
 
-          {/* PASSENGERS & SEARCH ACTION */}
-          <div className="lg:col-span-3">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 space-y-1.5">
-                <Label className="text-muted-foreground text-[10px] font-extrabold tracking-wider uppercase">
-                  PASSENGERS
-                </Label>
-                <div className="border-input bg-muted/40 focus-within:border-ring flex h-11 items-center gap-2 rounded-xl border px-3.5 transition-colors">
-                  <Users className="text-muted-foreground h-4 w-4 shrink-0" />
-                  <select
-                    value={params.passengers}
-                    onChange={(e) => void setParams({ passengers: e.target.value })}
-                    className="text-foreground w-full bg-transparent text-xs font-bold focus:outline-none"
-                  >
-                    <option value="1 Passenger">1 Passenger</option>
-                    <option value="2 Passengers">2 Passengers</option>
-                    <option value="3 Passengers">3 Passengers</option>
-                    <option value="4+ Group">4+ Group</option>
-                  </select>
-                </div>
-              </div>
+          {/* PASSENGERS */}
+          <div className="min-w-0 space-y-1.5 sm:col-span-1">
+            <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
+              <Users className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+              <span>PASSENGERS</span>
+            </Label>
+            <PassengerSelector
+              adults={adults}
+              childrenCount={childrenCount}
+              onChange={handlePassengersChange}
+            />
+          </div>
 
-              {/* Search Ferries Action Button */}
-              <div className="pt-4">
-                <Button
-                  size="lg"
-                  className="h-11 rounded-xl px-5 text-xs font-bold shadow-md transition-all hover:shadow-lg"
-                  onClick={() => {
-                    void setParams({ ...params });
-                  }}
-                >
-                  <span className="whitespace-nowrap">Search Ferries</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
+          {/* SEARCH FERRIES ACTION BUTTON */}
+          <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-1">
+            {/* Desktop alignment spacer matching label height */}
+            <div className="hidden lg:flex items-center text-[10px] font-extrabold uppercase invisible select-none">
+              <span>SEARCH</span>
             </div>
+            <Button
+              type="button"
+              onClick={handleSearch}
+              className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-600/25 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.98] cursor-pointer whitespace-nowrap"
+            >
+              <span>Search Ferries</span>
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </Button>
           </div>
         </div>
       </CardContent>
