@@ -13,6 +13,8 @@ export const bookingSearchParamsParsers = {
   to: parseAsString.withDefault("Maafushi"),
   departureDate: parseAsString.withDefault("2026-05-24"),
   passengers: parseAsString.withDefault("1 Passenger"),
+  adults: parseAsString.withDefault("1"),
+  children: parseAsString.withDefault("0"),
   bookingRef: parseAsString.withDefault("")
 };
 

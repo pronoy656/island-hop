@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   Anchor,
   ArrowRight,
@@ -17,27 +18,28 @@ import {
 } from "lucide-react";
 
 import heroBg from "@/assets/landing-page/hero-bg.png";
+import { cn } from "@/lib/utils";
+
+import { PassengerSelector } from "@/components/widgets/booking/PassengerSelector";
 import { PortCombobox } from "@/components/widgets/booking/PortCombobox";
 import {
   Button,
   Card,
   CardContent,
   DatePicker,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+  Label
 } from "@/ui";
-import { cn } from "@/lib/utils";
 
 export function HeroSection() {
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
   const [departurePort, setDeparturePort] = useState("Malé (Villingili Terminal)");
   const [destinationPort, setDestinationPort] = useState("Maafushi Island Port");
   const [departureDate, setDepartureDate] = useState("2026-08-25");
-  const [passengers, setPassengers] = useState("1 Passenger");
+  const [adults, setAdults] = useState(1);
+  const [childrenCount, setChildrenCount] = useState(0);
+
+  const totalPassengers = adults + childrenCount;
+  const passengersParam = `${totalPassengers} ${totalPassengers === 1 ? "Passenger" : "Passengers"}`;
 
   const handleSwapPorts = () => {
     const temp = departurePort;
@@ -63,21 +65,23 @@ export function HeroSection() {
             className="object-cover object-center"
           />
           {/* Subtle balanced gradient vignette so the ocean and ferry photo shine through vividly */}
-          <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-background/35 to-transparent/10 dark:from-background/90 dark:via-background/55 dark:to-transparent/20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
+          <div className="from-background/70 via-background/35 dark:from-background/90 dark:via-background/55 absolute inset-0 bg-gradient-to-r to-transparent/10 dark:to-transparent/20" />
+          <div className="from-background/40 absolute inset-0 bg-gradient-to-t via-transparent to-transparent" />
         </div>
 
         <div className="relative z-10 container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Hero Content Container */}
           <div className="max-w-2xl space-y-6">
             {/* Top Pill Tag */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-background/80 px-4 py-1.5 text-xs font-bold tracking-wider text-blue-600 shadow-sm backdrop-blur-md dark:border-blue-400/30 dark:bg-card/85 dark:text-blue-400">
+            <div className="bg-background/80 dark:bg-card/85 inline-flex items-center gap-2 rounded-full border border-blue-500/30 px-4 py-1.5 text-xs font-bold tracking-wider text-blue-600 shadow-sm backdrop-blur-md dark:border-blue-400/30 dark:text-blue-400">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
               </span>
               <Ship className="h-3.5 w-3.5" />
-              <span className="uppercase tracking-widest font-extrabold">MALDIVES #1 FERRY NETWORK</span>
+              <span className="font-extrabold tracking-widest uppercase">
+                MALDIVES #1 FERRY NETWORK
+              </span>
             </div>
 
             {/* Main Headline */}
@@ -90,27 +94,28 @@ export function HeroSection() {
             </h1>
 
             {/* Description Subtitle */}
-            <p className="text-foreground/80 max-w-xl text-sm font-medium leading-relaxed sm:text-base">
-              Book scheduled ferries, high-speed island transfers, and scenic atoll cruises with live seat availability and instant digital QR boarding passes.
+            <p className="text-foreground/80 max-w-xl text-sm leading-relaxed font-medium sm:text-base">
+              Book scheduled ferries, high-speed island transfers, and scenic atoll cruises with
+              live seat availability and instant digital QR boarding passes.
             </p>
 
             {/* Feature Highlights Pills */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/90 px-3.5 py-1.5 text-xs font-bold text-foreground shadow-2xs backdrop-blur-md transition-all hover:bg-card hover:shadow-xs">
+              <div className="border-border/70 bg-card/90 text-foreground hover:bg-card inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold shadow-2xs backdrop-blur-md transition-all hover:shadow-xs">
                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
                   <Compass className="h-3 w-3" />
                 </div>
                 <span>Live Seat Availability</span>
               </div>
 
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/90 px-3.5 py-1.5 text-xs font-bold text-foreground shadow-2xs backdrop-blur-md transition-all hover:bg-card hover:shadow-xs">
+              <div className="border-border/70 bg-card/90 text-foreground hover:bg-card inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold shadow-2xs backdrop-blur-md transition-all hover:shadow-xs">
                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   <ShieldCheck className="h-3 w-3" />
                 </div>
                 <span>Instant Guaranteed Boarding</span>
               </div>
 
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/90 px-3.5 py-1.5 text-xs font-bold text-foreground shadow-2xs backdrop-blur-md transition-all hover:bg-card hover:shadow-xs">
+              <div className="border-border/70 bg-card/90 text-foreground hover:bg-card inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold shadow-2xs backdrop-blur-md transition-all hover:shadow-xs">
                 <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                   <QrCode className="h-3 w-3" />
                 </div>
@@ -127,7 +132,7 @@ export function HeroSection() {
           <CardContent className="space-y-4 p-0">
             {/* Trip Type Segmented Pills & Live Trip Helper */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 p-1 backdrop-blur-xs">
+              <div className="border-border/60 bg-muted/60 inline-flex items-center gap-1 rounded-full border p-1 backdrop-blur-xs">
                 <button
                   type="button"
                   onClick={() => setTripType("one-way")}
@@ -159,7 +164,7 @@ export function HeroSection() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
               {/* FROM */}
               <div className="space-y-1.5 lg:col-span-3">
-                <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider">
+                <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
                   <MapPin className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   <span>FROM (DEPARTURE)</span>
                 </Label>
@@ -179,7 +184,7 @@ export function HeroSection() {
                   size="icon"
                   onClick={handleSwapPorts}
                   title="Swap ports"
-                  className="border-border/80 bg-background text-muted-foreground hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 h-9 w-9 rounded-full shadow-xs transition-all duration-300 hover:rotate-180"
+                  className="border-border/80 bg-background text-muted-foreground h-9 w-9 rounded-full shadow-xs transition-all duration-300 hover:rotate-180 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                 >
                   <ArrowUpDown className="h-3.5 w-3.5" />
                 </Button>
@@ -187,7 +192,7 @@ export function HeroSection() {
 
               {/* TO */}
               <div className="space-y-1.5 lg:col-span-3">
-                <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider">
+                <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
                   <Anchor className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   <span>TO (DESTINATION)</span>
                 </Label>
@@ -201,7 +206,7 @@ export function HeroSection() {
 
               {/* DEPARTURE */}
               <div className="space-y-1.5 lg:col-span-2">
-                <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider">
+                <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
                   <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   <span>TRAVEL DATE</span>
                 </Label>
@@ -209,7 +214,7 @@ export function HeroSection() {
                   value={departureDate}
                   onChange={setDepartureDate}
                   placeholder="Departure date"
-                  className="border-input bg-muted/40 hover:bg-muted/60 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 h-11 w-full rounded-xl px-3.5 text-xs font-bold text-foreground transition-all shadow-none"
+                  className="border-input bg-muted/40 hover:bg-muted/60 text-foreground h-11 w-full rounded-xl px-3.5 text-xs font-bold shadow-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
 
@@ -217,35 +222,29 @@ export function HeroSection() {
               <div className="lg:col-span-3">
                 <div className="flex items-center gap-3">
                   <div className="flex-1 space-y-1.5">
-                    <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider">
+                    <Label className="text-muted-foreground flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
                       <Users className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                       <span>PASSENGERS</span>
                     </Label>
-                    <Select value={passengers} onValueChange={setPassengers}>
-                      <SelectTrigger className="border-input bg-muted/40 hover:bg-muted/60 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 h-11 w-full rounded-xl px-3.5 text-xs font-bold text-foreground transition-all shadow-none">
-                        <div className="flex items-center gap-2 truncate">
-                          <Users className="text-muted-foreground h-4 w-4 shrink-0" />
-                          <SelectValue placeholder="Select passengers" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1 Passenger">1 Passenger</SelectItem>
-                        <SelectItem value="2 Passengers">2 Passengers</SelectItem>
-                        <SelectItem value="3 Passengers">3 Passengers</SelectItem>
-                        <SelectItem value="4+ Group">4+ Group Passengers</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <PassengerSelector
+                      adults={adults}
+                      childrenCount={childrenCount}
+                      onChange={({ adults: nextAdults, children: nextChildren }) => {
+                        setAdults(nextAdults);
+                        setChildrenCount(nextChildren);
+                      }}
+                    />
                   </div>
 
                   {/* Search Ferries Action Button */}
                   <div className="pt-4">
                     <Button
                       size="lg"
-                      className="group relative h-11 overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-5 text-xs font-bold text-white shadow-md shadow-blue-600/25 transition-all duration-300 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.98]"
+                      className="group relative h-11 overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-xs font-bold text-white shadow-md shadow-blue-600/25 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.98]"
                       asChild
                     >
                       <Link
-                        href={`/book?tripType=${encodeURIComponent(tripType)}&from=${encodeURIComponent(departurePort)}&to=${encodeURIComponent(destinationPort)}&departureDate=${encodeURIComponent(departureDate)}&passengers=${encodeURIComponent(passengers)}`}
+                        href={`/book?tripType=${encodeURIComponent(tripType)}&from=${encodeURIComponent(departurePort)}&to=${encodeURIComponent(destinationPort)}&departureDate=${encodeURIComponent(departureDate)}&passengers=${encodeURIComponent(passengersParam)}&adults=${adults}&children=${childrenCount}`}
                         className="flex items-center gap-2 whitespace-nowrap"
                       >
                         <span>Search Ferries</span>
