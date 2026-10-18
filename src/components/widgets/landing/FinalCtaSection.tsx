@@ -60,13 +60,13 @@ export function FinalCtaSection() {
         </p>
 
         {/* Action Buttons */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4">
           <Button
             size="lg"
-            className="h-12 rounded-2xl bg-blue-600 px-8 text-sm font-bold text-white shadow-2xl shadow-blue-600/50 transition-all hover:bg-blue-500 hover:scale-105 active:scale-95"
+            className="h-12 w-full sm:w-auto rounded-2xl bg-blue-600 px-8 text-sm font-bold text-white shadow-2xl shadow-blue-600/50 transition-all hover:bg-blue-500 hover:scale-105 active:scale-95"
             asChild
           >
-            <Link href="/routes" className="flex items-center gap-2">
+            <Link href="/routes" className="flex items-center justify-center gap-2">
               <span>Find a Ferry Route</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -75,10 +75,10 @@ export function FinalCtaSection() {
           <Button
             size="lg"
             variant="outline"
-            className="h-12 rounded-2xl border-white/30 bg-white/10 px-7 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:border-white/50"
+            className="h-12 w-full sm:w-auto rounded-2xl border-white/30 bg-white/10 px-7 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:border-white/50"
             asChild
           >
-            <Link href="/#book" className="flex items-center gap-2">
+            <Link href="/#book" className="flex items-center justify-center gap-2">
               <Compass className="h-4 w-4 text-sky-300" />
               <span>Search Timetables</span>
             </Link>

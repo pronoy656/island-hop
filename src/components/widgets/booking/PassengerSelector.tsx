@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, ChevronDown, Minus, Plus, Users } from "lucide-react";
-
 import { Button, Popover, PopoverContent, PopoverTrigger, Separator } from "@/ui";
 import { cn } from "@/lib/utils";
 
@@ -74,9 +73,9 @@ export function PassengerSelector({
       </PopoverTrigger>
 
       <PopoverContent
-        align="end"
+        align="center"
         sideOffset={8}
-        className="border-border/80 bg-card/95 text-foreground w-72 sm:w-80 rounded-2xl p-4 shadow-xl backdrop-blur-xl"
+        className="border-border/80 bg-card/95 text-foreground w-[calc(100vw-2rem)] max-w-[340px] sm:w-80 rounded-2xl p-4 shadow-xl backdrop-blur-xl sm:align-end"
       >
         <div className="space-y-3.5">
           {/* Header */}
