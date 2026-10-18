@@ -16,6 +16,7 @@ export default function AuthenticationLayout({ children }: { children: ReactNode
           alt="Cruise ferry vessel sailing on sea"
           fill
           priority
+          sizes="(max-width: 1024px) 100vw, 50vw"
           className="object-cover object-center"
         />
 

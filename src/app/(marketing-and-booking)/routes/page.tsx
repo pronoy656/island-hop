@@ -29,6 +29,7 @@ export default function RoutesPage() {
               alt="Cruise ferry on turquoise ocean"
               fill
               priority
+              sizes="100vw"
               className="object-cover object-center"
             />
             {/* Gradient Overlay for Text Readability */}

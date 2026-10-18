@@ -59,6 +59,7 @@ export function HeroSection() {
             alt="Ferry ship cruise on sunny tropical ocean"
             fill
             priority
+            sizes="100vw"
             className="object-cover object-center"
           />
           {/* Subtle balanced gradient vignette so the ocean and ferry photo shine through vividly */}

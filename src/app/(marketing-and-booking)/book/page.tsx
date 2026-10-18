@@ -53,6 +53,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
               alt="Available Ferries on blue ocean"
               fill
               priority
+              sizes="100vw"
               className="object-cover object-right"
             />
             {/* Gradient Overlay for Text Readability */}

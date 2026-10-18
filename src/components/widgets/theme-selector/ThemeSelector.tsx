@@ -11,8 +11,13 @@ export function ThemeSelector() {
   const { currentTheme, themes, setThemeId, randomTheme } = useThemePreset();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const filteredThemes = useMemo(() => {
     if (!searchQuery.trim()) return themes;
@@ -61,16 +66,22 @@ export function ThemeSelector() {
         onClick={() => setIsOpen(!isOpen)}
         className="border-border/80 bg-background/80 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium shadow-xs backdrop-blur-xs"
       >
-        <div className="flex items-center gap-1">
-          {currentTheme.swatches.map((color, idx) => (
-            <span
-              key={idx}
-              className="h-2.5 w-2.5 rounded-full border border-black/10 shadow-2xs dark:border-white/10"
-              style={{ backgroundColor: color }}
-            />
-          ))}
+        <div className="flex items-center gap-1" suppressHydrationWarning>
+          {mounted ? (
+            currentTheme.swatches.map((color, idx) => (
+              <span
+                key={idx}
+                className="h-2.5 w-2.5 rounded-full border border-black/10 shadow-2xs dark:border-white/10"
+                style={{ backgroundColor: color }}
+              />
+            ))
+          ) : (
+            <span className="h-2.5 w-2.5 rounded-full border border-black/10 shadow-2xs dark:border-white/10 bg-muted" />
+          )}
         </div>
-        <span className="max-w-[100px] truncate sm:max-w-[130px]">{currentTheme.name}</span>
+        <span className="max-w-[100px] truncate sm:max-w-[130px]" suppressHydrationWarning>
+          {mounted ? currentTheme.name : "Theme"}
+        </span>
         <ChevronDown
           className={`text-muted-foreground h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
         />

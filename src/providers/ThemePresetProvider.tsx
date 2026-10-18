@@ -37,15 +37,19 @@ function applyThemeStyles(theme: ThemePreset) {
 }
 
 export function ThemePresetProvider({ children }: { children: ReactNode }) {
-  const [activeThemeId, setActiveThemeId] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved && themesData.some((t) => t.id === saved)) {
-        return saved;
-      }
+  const [activeThemeId, setActiveThemeId] = useState<string>("default");
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && themesData.some((t) => t.id === saved)) {
+      setActiveThemeId(saved);
+      const theme = themesData.find((t) => t.id === saved);
+      if (theme) applyThemeStyles(theme);
+    } else {
+      const defaultTheme = themesData.find((t) => t.id === "default") || themesData[0];
+      if (defaultTheme) applyThemeStyles(defaultTheme);
     }
-    return "default";
-  });
+  }, []);
 
   useEffect(() => {
     const theme = themesData.find((t) => t.id === activeThemeId) || themesData[0];
