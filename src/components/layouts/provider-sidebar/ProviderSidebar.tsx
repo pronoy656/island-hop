@@ -8,7 +8,6 @@ import {
   CalendarX,
   ClipboardList,
   Clock,
-  ExternalLink,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -34,14 +33,14 @@ export const PROVIDER_NAV_ITEMS: ProviderNavItem[] = [
     icon: LayoutDashboard
   },
   {
-    name: "Ferries",
-    href: "/dashboard/operator/ferries",
-    icon: Ship
-  },
-  {
     name: "Routes",
     href: "/dashboard/operator/routes",
     icon: MapPin
+  },
+  {
+    name: "Ferries",
+    href: "/dashboard/operator/ferries",
+    icon: Ship
   },
   {
     name: "Schedules",
@@ -155,20 +154,8 @@ export function ProviderSidebar({ onItemClick, className }: ProviderSidebarProps
       </div>
 
       {/* Footer Info & Actions */}
-      <div className="border-border/80 border-t p-4 space-y-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start gap-2.5 text-xs font-medium h-9.5"
-          asChild
-        >
-          <Link href="/" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            <span>View Public Site</span>
-          </Link>
-        </Button>
-
-        <div className="flex items-center justify-between pt-1">
+      <div className="border-border/80 border-t p-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold text-sm">
               {profile.contactPerson.charAt(0)}

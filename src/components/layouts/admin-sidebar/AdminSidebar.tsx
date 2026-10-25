@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Anchor,
   Building2,
   CalendarCheck,
   CircleDollarSign,
@@ -11,7 +12,7 @@ import {
   LogOut,
   Settings,
   Ship,
-  ExternalLink
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks";
@@ -32,9 +33,19 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     exact: false
   },
   {
+    name: "Passengers",
+    href: "/dashboard/admin/users",
+    icon: Users
+  },
+  {
     name: "Operators",
     href: "/dashboard/admin/providers",
     icon: Building2
+  },
+  {
+    name: "Ports",
+    href: "/dashboard/admin/ports",
+    icon: Anchor
   },
   {
     name: "Bookings",
@@ -68,6 +79,18 @@ export function AdminSidebar({ onItemClick, className }: AdminSidebarProps) {
         pathname === "/dashboard/admin" ||
         pathname === "/dashboard/admin/overview" ||
         pathname === "/admin"
+      );
+    }
+    if (item.name === "Passengers" || item.name === "Users") {
+      return (
+        pathname.startsWith("/dashboard/admin/users") ||
+        pathname.startsWith("/admin/users")
+      );
+    }
+    if (item.name === "Ports") {
+      return (
+        pathname.startsWith("/dashboard/admin/ports") ||
+        pathname.startsWith("/admin/ports")
       );
     }
     return pathname.startsWith(item.href);
@@ -137,20 +160,8 @@ export function AdminSidebar({ onItemClick, className }: AdminSidebarProps) {
       </div>
 
       {/* Footer Info & Actions */}
-      <div className="border-border/80 border-t p-4 space-y-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start gap-2.5 text-xs font-medium h-9.5"
-          asChild
-        >
-          <Link href="/" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            <span>View Public Site</span>
-          </Link>
-        </Button>
-
-        <div className="flex items-center justify-between pt-1">
+      <div className="border-border/80 border-t p-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold text-sm">
               {user?.name ? user.name.charAt(0).toUpperCase() : "A"}

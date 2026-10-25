@@ -26,8 +26,12 @@ export function AdminHeader({
     ) {
       return "Overview";
     }
+    if (pathname.startsWith("/dashboard/admin/users") || pathname.startsWith("/admin/users"))
+      return "Passengers";
     if (pathname.startsWith("/dashboard/admin/providers") || pathname.startsWith("/admin/providers"))
       return "Operators Management";
+    if (pathname.startsWith("/dashboard/admin/ports") || pathname.startsWith("/admin/ports"))
+      return "Ports Management";
     if (pathname.startsWith("/dashboard/admin/bookings") || pathname.startsWith("/admin/bookings"))
       return "Bookings Management";
     if (pathname.startsWith("/dashboard/admin/payments") || pathname.startsWith("/admin/payments"))

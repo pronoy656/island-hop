@@ -67,7 +67,7 @@ export default function OperatorBookingsPage() {
       className: "text-foreground font-medium text-xs"
     },
     {
-      header: "VESSEL",
+      header: "FERRY",
       accessorKey: "vesselName",
       className: "text-muted-foreground text-xs"
     },
@@ -77,7 +77,7 @@ export default function OperatorBookingsPage() {
       className: "font-mono text-muted-foreground text-[11px]"
     },
     {
-      header: "PAX",
+      header: "SEATS",
       accessorKey: "pax",
       className: "text-center text-foreground font-semibold",
       align: "center"

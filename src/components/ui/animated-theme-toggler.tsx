@@ -225,7 +225,7 @@ export const AnimatedThemeToggler = ({
       }
     };
 
-    if (typeof document.startViewTransition !== "function") {
+    if (typeof (document as any).startViewTransition !== "function") {
       applyTheme();
       return;
     }
@@ -254,7 +254,7 @@ export const AnimatedThemeToggler = ({
     };
 
     isTransitioningRef.current = true;
-    const transition = document.startViewTransition(() => {
+    const transition = (document as any).startViewTransition(() => {
       flushSync(applyTheme);
     });
     if (typeof transition?.finished?.finally === "function") {

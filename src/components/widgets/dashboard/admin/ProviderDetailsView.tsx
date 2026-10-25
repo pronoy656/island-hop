@@ -124,7 +124,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
   // Fleet Columns
   const ferryColumns: TableColumn<ProviderFerryRow>[] = [
     {
-      header: "VESSEL NAME",
+      header: "FERRY NAME",
       accessorKey: "name",
       className: "font-semibold text-foreground",
       cell: (item) => (
@@ -139,7 +139,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       )
     },
     {
-      header: "VESSEL TYPE",
+      header: "FERRY TYPE",
       accessorKey: "type",
       className: "text-muted-foreground",
       cell: (item) => item.type || "Passenger Ferry"
@@ -409,7 +409,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       {/* Core KPI Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="FLEET VESSELS"
+          label="FLEET FERRIES"
           value={formattedFerries.length}
           icon={Ship}
           changePercent={0}
@@ -492,7 +492,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Fleet Ferries Table */}
         <DashboardTableCard
-          title={`Registered Vessel Fleet (${formattedFerries.length})`}
+          title={`Registered Ferries (${formattedFerries.length})`}
           columns={ferryColumns}
           data={formattedFerries}
           keyExtractor={(item) => item.id}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { LayoutDashboard, LogOut, Ship } from "lucide-react";
+import { LayoutDashboard, LogOut, Ship, Ticket } from "lucide-react";
 
 import { useAuth } from "@/hooks";
 
@@ -23,6 +23,13 @@ export function Header() {
   const isPassenger =
     isAuthenticated &&
     (user?.role?.toUpperCase() === "PASSENGER" || user?.role?.toUpperCase() === "USER");
+
+  const dashboardHref = (() => {
+    const role = (user?.role || "").toUpperCase();
+    if (role === "ADMIN" || role === "SUPER_ADMIN") return "/dashboard/admin";
+    if (role === "OPERATOR") return "/dashboard/operator";
+    return "/manage-booking";
+  })();
 
   const visibleNavLinks = NAV_LINKS.filter((link) => {
     if (link.href === "/manage-booking") {
@@ -77,9 +84,13 @@ export function Header() {
                 className="h-9 gap-1.5 text-xs font-semibold"
                 asChild
               >
-                <Link href="/dashboard">
-                  <LayoutDashboard className="h-3.5 w-3.5" />
-                  <span>{user?.name || "Dashboard"}</span>
+                <Link href={dashboardHref}>
+                  {isPassenger ? (
+                    <Ticket className="h-3.5 w-3.5" />
+                  ) : (
+                    <LayoutDashboard className="h-3.5 w-3.5" />
+                  )}
+                  <span>{user?.name || (isPassenger ? "My Bookings" : "Dashboard")}</span>
                 </Link>
               </Button>
               <Button

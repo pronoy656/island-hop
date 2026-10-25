@@ -3,12 +3,20 @@
 import { use, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-import { ArrowRight, Calendar, Clock, Info, Minus, Plus, Ship, Tag } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Calendar,
+  Clock,
+  Info,
+  Minus,
+  Plus,
+  Ship,
+  Tag
+} from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 
-import { AVAILABLE_FERRIES } from "@/data/ferries";
-
+import { useTripDetailsQuery } from "@/hooks/use-trips";
 import { BookingStepperNav, BookingSummarySidebar } from "@/widgets";
 import { AnimatedSection, Button, Card, CardContent } from "@/ui";
 
@@ -25,12 +33,18 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
     "passengers",
     parseAsInteger.withDefault(1)
   );
-  const [departureDate] = useQueryState("departureDate", parseAsString.withDefault("2026-05-24"));
+  const [departureDate] = useQueryState("departureDate", parseAsString.withDefault(""));
+  const [fromPort] = useQueryState("from", parseAsString.withDefault(""));
+  const [toPort] = useQueryState("to", parseAsString.withDefault(""));
+  const [tripType] = useQueryState("tripType", parseAsString.withDefault("one-way"));
 
-  const trip = AVAILABLE_FERRIES.find((t) => t.id === tripId) || AVAILABLE_FERRIES[0];
+  const { data: trip, isLoading, isError, error } = useTripDetailsQuery(tripId);
+
+  const availableSeats = trip?.availableSeats ?? 50;
+  const fare = trip?.adultFare ?? 25;
 
   const handleIncrement = () => {
-    if (passengerCount < trip.availableSeats) {
+    if (passengerCount < availableSeats) {
       void setPassengerCount(passengerCount + 1);
     }
   };
@@ -44,17 +58,20 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
   const handleContinue = () => {
     startTransition(() => {
       router.push(
-        `/book/${trip.id}/passengers?passengers=${passengerCount}&departureDate=${encodeURIComponent(
-          departureDate
-        )}`
+        `/book/${tripId}/passengers?passengers=${passengerCount}&departureDate=${encodeURIComponent(
+          departureDate || (trip?.departureTime ? trip.departureTime.split("T")[0] : "")
+        )}&from=${encodeURIComponent(trip?.departurePort || fromPort)}&to=${encodeURIComponent(
+          trip?.destinationPort || toPort
+        )}&tripType=${tripType}`
       );
     });
   };
 
   // Format date display
-  let formattedDate = departureDate;
+  const effectiveDate = departureDate || (trip?.departureTime ? trip.departureTime.split("T")[0] : "");
+  let formattedDate = effectiveDate;
   try {
-    const d = new Date(departureDate);
+    const d = new Date(effectiveDate);
     if (!isNaN(d.getTime())) {
       formattedDate = d.toLocaleDateString("en-US", {
         weekday: "short",
@@ -64,8 +81,77 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
       });
     }
   } catch {
-    formattedDate = departureDate;
+    formattedDate = effectiveDate;
   }
+
+  // Format departure / arrival times
+  const depTimeDisplay = trip?.departureTime
+    ? new Date(trip.departureTime).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    : "TBD";
+  const arrTimeDisplay = trip?.arrivalTime
+    ? new Date(trip.arrivalTime).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    : "TBD";
+
+  if (isLoading) {
+    return (
+      <div className="dark:bg-background min-h-screen bg-[#F8FAFC] py-20">
+        <div className="border-border/60 dark:bg-card border-b bg-white">
+          <BookingStepperNav currentStep={1} />
+        </div>
+        <main className="container mx-auto mt-8 max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+            <div className="space-y-6 lg:col-span-8">
+              <Card className="animate-pulse p-6 rounded-2xl border border-border bg-card">
+                <div className="h-44 w-full bg-muted/60 rounded-xl" />
+              </Card>
+            </div>
+            <div className="lg:col-span-4">
+              <Card className="animate-pulse p-6 rounded-2xl border border-border bg-card">
+                <div className="h-64 w-full bg-muted/60 rounded-xl" />
+              </Card>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (isError || !trip) {
+    return (
+      <div className="dark:bg-background min-h-screen bg-[#F8FAFC] py-20">
+        <main className="container mx-auto mt-8 max-w-xl px-4 text-center">
+          <Card className="p-8 rounded-2xl border border-destructive/20 bg-destructive/5 space-y-4">
+            <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
+            <h2 className="text-xl font-bold text-foreground">Ferry Trip Not Found</h2>
+            <p className="text-xs text-muted-foreground">
+              {error instanceof Error ? error.message : "The requested sailing could not be retrieved."}
+            </p>
+            <Button asChild className="rounded-xl">
+              <Link href="/ferries">Return to Search</Link>
+            </Button>
+
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  const sidebarTripData = {
+    adultFare: fare,
+    departurePort: trip.departurePort,
+    arrivalPort: trip.destinationPort,
+    departureTime: depTimeDisplay,
+    duration: trip.duration,
+    operator: trip.operator
+  };
 
   return (
     <div className="dark:bg-background min-h-screen bg-[#F8FAFC] py-20">
@@ -92,7 +178,7 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
                       Your ferry trip
                     </span>
                     <h2 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl">
-                      {trip.departurePort} &rarr; {trip.arrivalPort}
+                      {trip.departurePort} &rarr; {trip.destinationPort}
                     </h2>
                   </div>
 
@@ -103,10 +189,13 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
                     asChild
                   >
                     <Link
-                      href={`/book?passengers=${passengerCount}&departureDate=${departureDate}`}
+                      href={`/ferries?from=${encodeURIComponent(trip.departurePort)}&to=${encodeURIComponent(
+                        trip.destinationPort
+                      )}&departureDate=${encodeURIComponent(effectiveDate)}&passengers=${passengerCount}`}
                     >
                       Change Trip
                     </Link>
+
                   </Button>
                 </div>
 
@@ -129,7 +218,7 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
                     <div className="space-y-0.5">
                       <div className="text-muted-foreground text-[11px] font-medium">Time</div>
                       <div className="text-foreground text-sm font-bold">
-                        {trip.departureTime} &rarr; {trip.arrivalTime}
+                        {depTimeDisplay} &rarr; {arrTimeDisplay}
                       </div>
                       <div className="text-muted-foreground text-xs">{trip.duration}</div>
                     </div>
@@ -140,8 +229,9 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
                       <Ship className="h-4 w-4" />
                     </div>
                     <div className="space-y-0.5">
-                      <div className="text-muted-foreground text-[11px] font-medium">Operator</div>
+                      <div className="text-muted-foreground text-[11px] font-medium">Operator &amp; Ferry</div>
                       <div className="text-foreground text-sm font-bold">{trip.operator}</div>
+                      <div className="text-muted-foreground text-xs">{trip.vessel} ({trip.vesselType || "Speedboat"})</div>
                     </div>
                   </div>
 
@@ -152,7 +242,7 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
                     <div className="space-y-0.5">
                       <div className="text-muted-foreground text-[11px] font-medium">Fare</div>
                       <div className="text-foreground text-sm font-bold">
-                        ${trip.price}{" "}
+                        ${fare}{" "}
                         <span className="text-muted-foreground text-xs font-normal">
                           / passenger
                         </span>
@@ -167,9 +257,9 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
             <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-[#EBF5FF] p-4 text-[#003B95] dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
               <Info className="mt-0.5 h-5 w-5 shrink-0" />
               <div className="space-y-0.5 text-xs sm:text-sm">
-                <div className="font-bold">{trip.availableSeats} seats remaining</div>
+                <div className="font-bold">{availableSeats} seats remaining</div>
                 <div className="text-xs text-blue-900/80 dark:text-blue-200/80">
-                  Tickets are subject to the remaining passenger capacity of this ferry.
+                  Tickets are confirmed instantly and seat reservations are locked for checkout.
                 </div>
               </div>
             </div>
@@ -208,7 +298,7 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
                     type="button"
                     size="icon"
                     onClick={handleIncrement}
-                    disabled={passengerCount >= trip.availableSeats}
+                    disabled={passengerCount >= availableSeats}
                     className="h-10 w-10 rounded-xl bg-[#003B95] text-white hover:bg-[#002f77]"
                   >
                     <Plus className="h-4 w-4" />
@@ -222,7 +312,7 @@ export default function Step1ReviewPage({ params }: Step1ReviewPageProps) {
           <AnimatedSection delay={0.08} className="lg:col-span-4">
             <div className="sticky top-24">
               <BookingSummarySidebar
-                trip={trip}
+                trip={sidebarTripData}
                 passengerCount={passengerCount}
                 departureDate={formattedDate}
                 actionButton={

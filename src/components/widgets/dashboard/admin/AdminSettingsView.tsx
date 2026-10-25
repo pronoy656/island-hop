@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   BadgePercent,
   Building2,
-  Calendar,
   Check,
   CheckCircle2,
   CreditCard,
@@ -20,8 +19,6 @@ import {
   Phone,
   RotateCcw,
   Save,
-  Server,
-  Shield,
   ShieldCheck,
   Sparkles,
   User,
@@ -195,7 +192,7 @@ export function AdminSettingsView() {
     lastName: "Fahim",
     email: "admin@ferrygo.com",
     phone: "+880 1812-345678",
-    role: "Super Administrator",
+    role: "Platform Admin",
     adminId: "ADM-90214",
     department: "Executive Operations",
     joinedDate: "January 15, 2024",
@@ -821,9 +818,9 @@ export function AdminSettingsView() {
         {/* TAB 2: PLATFORM INFORMATION                                               */}
         {/* ========================================================================= */}
         <TabsContent value="platform" className="space-y-6 outline-hidden">
-          <form onSubmit={handleSavePlatformInfo} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <form onSubmit={handleSavePlatformInfo} className="max-w-4xl space-y-6">
             {/* Left Form: Platform Details */}
-            <div className="lg:col-span-8 space-y-6">
+            <div className="space-y-6">
               <Card className="border-border/80 bg-card shadow-xs">
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
@@ -998,52 +995,6 @@ export function AdminSettingsView() {
                 </CardFooter>
               </Card>
             </div>
-
-            {/* Right Column: Platform Status & System Health */}
-            <div className="lg:col-span-4 space-y-6">
-              <Card className="border-border/80 bg-card shadow-xs">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                      <Server className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-bold text-foreground">
-                        System Health & Gateway
-                      </CardTitle>
-                      <CardDescription className="text-[11px]">
-                        Operational environment status.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-3 pt-1 text-xs">
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border/60">
-                    <span className="text-muted-foreground font-medium">Core API Engine</span>
-                    <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Operational
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border/60">
-                    <span className="text-muted-foreground font-medium">Payment Gateway</span>
-                    <span className="font-semibold text-foreground">Stripe & SSLCommerz</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border/60">
-                    <span className="text-muted-foreground font-medium">Email Dispatcher</span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Connected (SMTP)</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border border-border/60">
-                    <span className="text-muted-foreground font-medium">App Release Version</span>
-                    <span className="font-mono font-semibold text-foreground">v2.4.0-turbopack</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </form>
         </TabsContent>
 
@@ -1134,24 +1085,6 @@ export function AdminSettingsView() {
                       <p className="text-sm font-mono font-semibold text-foreground">
                         {adminProfile.phone}
                       </p>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl border border-border/80 bg-muted/20 space-y-1">
-                      <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                        <Shield className="h-3.5 w-3.5 text-violet-600" />
-                        Admin ID
-                      </div>
-                      <p className="text-sm font-mono font-bold text-foreground">
-                        {adminProfile.adminId}
-                      </p>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl border border-border/80 bg-muted/20 space-y-1">
-                      <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-amber-600" />
-                        Account Created
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">{adminProfile.joinedDate}</p>
                     </div>
                   </div>
                 </CardContent>

@@ -26,9 +26,9 @@ const FEATURES = [
   {
     icon: Navigation,
     badge: "Live Marine Radar",
-    title: "Real-Time Vessel ETA & Dock Radar",
+    title: "Real-Time Ferry ETA & Dock Radar",
     description:
-      "Know exactly where your ferry is on the ocean. Track approaching vessels, scheduled harbor docks, and live maritime weather notifications.",
+      "Know exactly where your ferry is on the ocean. Track approaching ferries, scheduled harbor docks, and live maritime weather notifications.",
     bullets: ["GPS live boat telemetry", "Departure terminal pier notifications", "Ocean conditions radar"],
     gradient: "from-indigo-600/10 via-indigo-500/5 to-transparent",
     iconColor: "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10"

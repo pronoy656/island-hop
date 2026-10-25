@@ -1,14 +1,12 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 import Link from "next/link";
-
-import { Check, Ship, Ticket, User } from "lucide-react";
-import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
+import { Check, Download, QrCode, Ship, Ticket, User } from "lucide-react";
+import { parseAsString, useQueryState } from "nuqs";
 import { QRCodeSVG } from "qrcode.react";
 
-import { AVAILABLE_FERRIES } from "@/data/ferries";
-
+import { useBookingLookupQuery } from "@/hooks/use-bookings";
 import { BookingStepperNav } from "@/widgets";
 import { AnimatedSection, Button, Card, CardContent } from "@/ui";
 
@@ -16,54 +14,46 @@ interface Step4ConfirmationPageProps {
   params: Promise<{ tripId: string }>;
 }
 
-interface StoredPassenger {
-  firstName: string;
-  lastName: string;
-}
-
 export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageProps) {
   const { tripId } = use(params);
+  const [bookingRef] = useQueryState("ref", parseAsString.withDefault(""));
 
-  const [bookingRef] = useQueryState("ref", parseAsString.withDefault("FRY24821"));
-  const [passengerCount] = useQueryState("passengers", parseAsInteger.withDefault(1));
-  const [departureDate] = useQueryState("departureDate", parseAsString.withDefault("2026-05-24"));
+  const { data: booking, isLoading } = useBookingLookupQuery(bookingRef);
 
-  const trip = AVAILABLE_FERRIES.find((t) => t.id === tripId) || AVAILABLE_FERRIES[0];
+  // Derived values from live DB booking
+  const refCode = booking?.reference || bookingRef || "BK-CONFIRMED";
+  const depPort = booking?.schedule?.route?.departurePort?.name || "Malé Ferry Terminal";
+  const arrPort = booking?.schedule?.route?.destinationPort?.name || "Maafushi Jetty";
+  const operatorName = booking?.schedule?.route?.operator?.companyName || "Atoll Ferries";
+  const vesselName = booking?.schedule?.ferry?.name || "Ocean Express";
+  const totalAmount = booking?.totalAmount ?? 35;
+  const passengers = booking?.tickets || [];
+  const status = booking?.status || "CONFIRMED";
 
-  const [storedPassengers] = useState<StoredPassenger[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const data = sessionStorage.getItem(`booking_${trip.id}_passengers`);
-        if (data) {
-          const parsed = JSON.parse(data);
-          if (parsed?.passengers?.length) {
-            return parsed.passengers;
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-    return [{ firstName: "Jane", lastName: "Doe" }];
-  });
-
-  // Format date display
-  let formattedDate = departureDate;
-  try {
-    const d = new Date(departureDate);
-    if (!isNaN(d.getTime())) {
-      formattedDate = d.toLocaleDateString("en-US", {
+  const departureDateDisplay = booking?.schedule?.departureTime
+    ? new Date(booking.schedule.departureTime).toLocaleDateString("en-US", {
         weekday: "short",
         day: "numeric",
         month: "short",
         year: "numeric"
-      });
-    }
-  } catch {
-    formattedDate = departureDate;
-  }
+      })
+    : "Departure Scheduled";
 
-  const totalPrice = trip.price * passengerCount;
+  const departureTimeDisplay = booking?.schedule?.departureTime
+    ? new Date(booking.schedule.departureTime).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    : "TBD";
+
+  const arrivalTimeDisplay = booking?.schedule?.arrivalTime
+    ? new Date(booking.schedule.arrivalTime).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    : "TBD";
 
   return (
     <div className="dark:bg-background min-h-screen bg-[#F8FAFC] py-20">
@@ -80,8 +70,8 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
           whileInView={{ opacity: 1, scale: 1 }}
           className="space-y-3 text-center"
         >
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#A3E635]/30 text-[#15803D] dark:bg-emerald-950/40 dark:text-emerald-400">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#38BDF8]/40 text-[#0284C7] dark:bg-sky-900/50 dark:text-sky-300">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600">
               <Check className="h-5 w-5 stroke-[3]" />
             </div>
           </div>
@@ -90,8 +80,7 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
             Your booking is confirmed!
           </h1>
           <p className="text-muted-foreground mx-auto max-w-md text-xs sm:text-sm">
-            Your ferry ticket is ready. Keep your booking reference and QR ticket with you for
-            boarding.
+            Your digital ferry boarding pass is ready. Show your QR code at the pier gate for priority boarding.
           </p>
         </AnimatedSection>
 
@@ -105,15 +94,15 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
                   <div className="text-muted-foreground text-[10px] font-extrabold tracking-widest uppercase">
                     BOOKING REFERENCE
                   </div>
-                  <div className="text-3xl font-black tracking-tight text-[#003B95] dark:text-blue-400">
-                    {bookingRef}
+                  <div className="text-3xl font-black tracking-tight text-[#003B95] dark:text-blue-400 font-mono">
+                    {refCode}
                   </div>
                 </div>
 
                 {/* QR Code */}
                 <div className="border-border/80 mx-auto flex w-fit items-center justify-center rounded-2xl border bg-white p-4 shadow-inner">
                   <QRCodeSVG
-                    value={`https://islandhop.com/tickets/${bookingRef}`}
+                    value={`https://islandhop.com/tickets/${refCode}`}
                     size={160}
                     level="H"
                     includeMargin={false}
@@ -126,12 +115,8 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
                     asChild
                     className="h-11 w-full rounded-xl bg-[#003B95] text-xs font-bold text-white shadow-md transition-all hover:bg-[#002f77]"
                   >
-                    <Link
-                      href={`/tickets/${bookingRef}?tripId=${trip.id}&departureDate=${encodeURIComponent(
-                        departureDate
-                      )}`}
-                    >
-                      <Ticket className="mr-2 h-4 w-4" /> View E-Ticket
+                    <Link href={`/tickets/${refCode}`}>
+                      <Ticket className="mr-2 h-4 w-4" /> View Digital Boarding Pass
                     </Link>
                   </Button>
 
@@ -140,7 +125,7 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
                     asChild
                     className="border-border/80 h-11 w-full rounded-xl text-xs font-semibold"
                   >
-                    <Link href="/manage-booking">Manage Booking</Link>
+                    <Link href={`/manage-booking/${refCode}`}>Manage Booking</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -152,41 +137,46 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
             {/* Trip Details Card */}
             <Card className="border-border/80 dark:bg-card rounded-2xl border bg-white p-6 shadow-sm">
               <CardContent className="space-y-6 p-0">
-                <div className="border-border/60 text-foreground flex items-center gap-2 border-b pb-4 text-base font-bold">
-                  <Ship className="h-4 w-4 text-[#003B95]" />
-                  <span>Trip Details</span>
+                <div className="border-border/60 text-foreground flex items-center justify-between border-b pb-4 text-base font-bold">
+                  <div className="flex items-center gap-2">
+                    <Ship className="h-4 w-4 text-[#003B95]" />
+                    <span>Trip Details</span>
+                  </div>
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-600">
+                    {status}
+                  </span>
                 </div>
 
                 {/* Origin to Destination Track */}
                 <div className="bg-muted/40 flex items-center justify-between rounded-xl p-4">
                   <div className="space-y-0.5">
                     <div className="text-muted-foreground text-[10px] font-bold uppercase">
-                      Origin
+                      Origin Port
                     </div>
                     <div className="text-foreground text-base font-bold sm:text-lg">
-                      {trip.departurePort}
+                      {depPort}
                     </div>
                     <div className="text-muted-foreground text-xs font-medium">
-                      {trip.departureTime}
+                      {departureTimeDisplay}
                     </div>
                   </div>
 
                   <div className="flex flex-col items-center px-4">
                     <Ship className="h-4 w-4 text-[#003B95]" />
                     <div className="text-muted-foreground mt-1 text-[11px] font-medium">
-                      {formattedDate}
+                      {departureDateDisplay}
                     </div>
                   </div>
 
                   <div className="space-y-0.5 text-right">
                     <div className="text-muted-foreground text-[10px] font-bold uppercase">
-                      Destination
+                      Destination Port
                     </div>
                     <div className="text-foreground text-base font-bold sm:text-lg">
-                      {trip.arrivalPort}
+                      {arrPort}
                     </div>
                     <div className="text-muted-foreground text-xs font-medium">
-                      {trip.arrivalTime}
+                      {arrivalTimeDisplay}
                     </div>
                   </div>
                 </div>
@@ -194,14 +184,18 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
                 {/* Metadata Row */}
                 <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
                   <div>
-                    <div className="text-muted-foreground text-[11px] font-medium">Operator</div>
-                    <div className="text-foreground font-bold">{trip.operator}</div>
+                    <div className="text-muted-foreground text-[11px] font-medium">Operator &amp; Ferry</div>
+                    <div className="text-foreground font-bold">{operatorName}</div>
+                    <div className="text-muted-foreground text-xs">{vesselName}</div>
                   </div>
 
                   <div>
-                    <div className="text-muted-foreground text-[11px] font-medium">Passengers</div>
+                    <div className="text-muted-foreground text-[11px] font-medium">Boarding Gate</div>
                     <div className="text-foreground font-bold">
-                      {passengerCount} {passengerCount === 1 ? "Passenger" : "Passengers"}
+                      {booking?.schedule?.gate || "Pier 1"}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      {passengers.length || 1} Registered Pax
                     </div>
                   </div>
                 </div>
@@ -210,8 +204,8 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
 
                 <div className="flex items-baseline justify-between pt-1">
                   <span className="text-foreground text-sm font-bold">Total Paid</span>
-                  <span className="text-foreground text-2xl font-black sm:text-3xl">
-                    ${totalPrice}
+                  <span className="text-foreground text-2xl font-black sm:text-3xl text-emerald-600">
+                    ${totalAmount}
                   </span>
                 </div>
               </CardContent>
@@ -220,30 +214,54 @@ export default function Step4ConfirmationPage({ params }: Step4ConfirmationPageP
             {/* Passenger Information Card */}
             <Card className="border-border/80 dark:bg-card rounded-2xl border bg-white p-6 shadow-sm">
               <CardContent className="space-y-4 p-0">
-                <div className="text-foreground flex items-center gap-2 text-base font-bold">
-                  <User className="h-4 w-4 text-[#003B95]" />
-                  <span>Passenger Information</span>
+                <div className="text-foreground flex items-center justify-between text-base font-bold">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-[#003B95]" />
+                    <span>Issued Tickets ({passengers.length || 1})</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-normal">
+                    Coast Guard Manifest Registered
+                  </span>
                 </div>
 
                 <div className="space-y-2.5">
-                  {storedPassengers.map((p, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-muted/40 text-foreground flex items-center gap-3 rounded-xl p-3.5 text-xs font-semibold sm:text-sm"
-                    >
+                  {passengers.length > 0 ? (
+                    passengers.map((t, idx) => (
+                      <div
+                        key={t.id || idx}
+                        className="bg-muted/40 text-foreground flex items-center justify-between rounded-xl p-3.5 text-xs font-semibold sm:text-sm"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-lg">
+                            <Ticket className="h-4 w-4" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="text-foreground font-bold">{t.passengerName}</div>
+                            <div className="text-muted-foreground text-[11px]">
+                              {t.nationality} &bull; ID: {t.passportOrId} &bull; {t.cabinClass}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="font-mono text-xs font-extrabold text-[#003B95] dark:text-blue-400">
+                          {t.ticketNumber}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="bg-muted/40 text-foreground flex items-center gap-3 rounded-xl p-3.5 text-xs font-semibold sm:text-sm">
                       <div className="bg-muted text-muted-foreground flex h-7 w-7 items-center justify-center rounded-lg">
                         <User className="h-3.5 w-3.5" />
                       </div>
                       <div className="space-y-0.5">
-                        <div className="text-muted-foreground text-[10px] font-medium">
-                          Passenger {idx + 1}
+                        <div className="text-foreground font-bold">
+                          {booking?.leadPassengerName || "Lead Passenger"}
                         </div>
-                        <div>
-                          {p.firstName} {p.lastName}
+                        <div className="text-muted-foreground text-[10px]">
+                          {booking?.leadPassengerEmail || "Registered"}
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -185,14 +185,14 @@ export default function OperatorManifestPage() {
             </div>
             <p className="text-sm font-extrabold text-foreground">{trip.routeName}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Vessel: {trip.vesselName} • Dep: {trip.departureTime}
+              Ferry: {trip.vesselName} • Dep: {trip.departureTime}
             </p>
             <div className="mt-3 flex items-center justify-between text-xs font-mono font-semibold pt-2 border-t border-border/60">
               <span className="text-emerald-600 dark:text-emerald-400">
-                Boarded: {trip.totalBoarded} PAX
+                Boarded: {trip.totalBoarded}
               </span>
               <span className="text-muted-foreground">
-                Cap: {trip.totalCapacity}
+                Seats: {trip.totalCapacity}
               </span>
             </div>
           </button>

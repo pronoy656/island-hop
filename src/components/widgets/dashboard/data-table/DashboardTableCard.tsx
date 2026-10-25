@@ -26,7 +26,8 @@ export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> 
 }
 
 export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
-  const normalizedStatus = status.toLowerCase();
+  const normalizedStatus = (status || "").toLowerCase().replace(/_/g, " ");
+
 
   let colorClasses =
     "bg-muted text-muted-foreground border-border/80";
@@ -91,7 +92,7 @@ export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
 }
 
 export interface TableColumn<T> {
-  header: string;
+  header: React.ReactNode;
   accessorKey?: keyof T;
   headerClassName?: string;
   className?: string;
@@ -100,15 +101,17 @@ export interface TableColumn<T> {
 }
 
 export interface DashboardTableCardProps<T> {
-  title: string;
+  title: string | React.ReactNode;
   viewAllHref?: string;
   viewAllLabel?: string;
   onViewAll?: () => void;
+  headerRight?: React.ReactNode;
   columns: TableColumn<T>[];
   data: T[];
   keyExtractor?: (item: T, index: number) => string | number;
   emptyMessage?: string;
   className?: string;
+  rowClassName?: (item: T, index: number) => string | undefined;
 }
 
 export function DashboardTableCard<T>({
@@ -116,11 +119,13 @@ export function DashboardTableCard<T>({
   viewAllHref,
   viewAllLabel = "View all",
   onViewAll,
+  headerRight,
   columns,
   data,
   keyExtractor,
   emptyMessage = "No data available.",
-  className
+  className,
+  rowClassName
 }: DashboardTableCardProps<T>) {
   return (
     <div
@@ -130,9 +135,15 @@ export function DashboardTableCard<T>({
       )}
     >
       {/* Header inside the Card with uniform height */}
-      <div className="flex items-center justify-between px-5 py-4 md:px-6 h-[58px] border-b border-border/40">
-        <h3 className="text-base font-bold tracking-tight text-foreground">{title}</h3>
-        {viewAllHref ? (
+      <div className="flex items-center justify-between px-5 py-4 md:px-6 min-h-[58px] border-b border-border/40 gap-3">
+        {typeof title === "string" ? (
+          <h3 className="text-base font-bold tracking-tight text-foreground">{title}</h3>
+        ) : (
+          title
+        )}
+        {headerRight ? (
+          headerRight
+        ) : viewAllHref ? (
           <Link
             href={viewAllHref}
             className="text-primary hover:text-primary/80 hover:underline text-xs font-semibold transition-colors"
@@ -187,7 +198,10 @@ export function DashboardTableCard<T>({
                 return (
                   <TableRow
                     key={key}
-                    className="border-border/60 hover:bg-muted/30 transition-colors h-[54px]"
+                    className={cn(
+                      "border-border/60 hover:bg-muted/30 transition-colors h-[54px]",
+                      rowClassName?.(item, rowIdx)
+                    )}
                   >
                     {columns.map((col, colIdx) => (
                       <TableCell

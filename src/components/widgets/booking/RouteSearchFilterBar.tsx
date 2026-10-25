@@ -17,10 +17,11 @@ export function RouteSearchFilterBar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     router.push(
-      `/book?from=${encodeURIComponent(departurePort)}&to=${encodeURIComponent(
+      `/ferries?from=${encodeURIComponent(departurePort)}&to=${encodeURIComponent(
         destination
       )}&departureDate=2026-05-24&passengers=1%20Passenger`
     );
+
   };
 
   return (

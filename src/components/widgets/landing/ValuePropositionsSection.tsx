@@ -14,7 +14,7 @@ const VALUE_PROPS = [
   {
     icon: Compass,
     title: "Live GPS & Seat Matrix",
-    description: "Real-time vessel departure tracking and direct deck seat selection.",
+    description: "Real-time ferry departure tracking and direct deck seat selection.",
     iconBg: "bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400"
   },
   {

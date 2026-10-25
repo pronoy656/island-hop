@@ -1,15 +1,26 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 import Link from "next/link";
-
-import { ArrowLeft, Clock, Printer, Sailboat, Ship } from "lucide-react";
-import { parseAsString, useQueryState } from "nuqs";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  Clock,
+  Download,
+  Info,
+  MapPin,
+  Printer,
+  Sailboat,
+  ShieldCheck,
+  Ship,
+  Ticket,
+  User
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
-import { AVAILABLE_FERRIES } from "@/data/ferries";
-
-import { AnimatedSection, Button } from "@/ui";
+import { useDigitalPassQuery } from "@/hooks/use-tickets";
+import { AnimatedSection, Badge, Button, Card } from "@/ui";
 
 interface ETicketPageProps {
   params: Promise<{ bookingRef: string }>;
@@ -18,45 +29,70 @@ interface ETicketPageProps {
 export default function ETicketPage({ params }: ETicketPageProps) {
   const { bookingRef } = use(params);
 
-  const [tripId] = useQueryState("tripId", parseAsString.withDefault("trip-1"));
-  const [departureDate] = useQueryState("departureDate", parseAsString.withDefault("2026-05-24"));
+  const { data: pass, isLoading, isError, error } = useDigitalPassQuery(bookingRef);
 
-  const trip = AVAILABLE_FERRIES.find((t) => t.id === tripId) || AVAILABLE_FERRIES[0];
+  if (isLoading) {
+    return (
+      <div className="dark:bg-background flex min-h-screen flex-col items-center justify-center bg-[#F8FAFC] px-4 py-20">
+        <div className="w-full max-w-md space-y-4">
+          <div className="h-8 w-48 rounded bg-muted animate-pulse" />
+          <div className="h-[520px] w-full rounded-3xl bg-card border border-border animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
-  const [passengers] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const data = sessionStorage.getItem(`booking_${trip.id}_passengers`);
-        if (data) {
-          const parsed = JSON.parse(data);
-          if (parsed?.passengers?.length) {
-            return parsed.passengers.map(
-              (p: { firstName: string; lastName: string }) => `${p.firstName} ${p.lastName}`
-            );
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-    return ["Jane Doe"];
-  });
+  if (isError || !pass) {
+    return (
+      <div className="dark:bg-background flex min-h-screen flex-col items-center justify-center bg-[#F8FAFC] px-4 py-20">
+        <Card className="w-full max-w-md p-8 text-center rounded-3xl border border-destructive/20 bg-destructive/5 space-y-4">
+          <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
+          <h2 className="text-xl font-bold text-foreground">Boarding Pass Not Found</h2>
+          <p className="text-xs text-muted-foreground">
+            {error instanceof Error ? error.message : `No active ticket found for reference ${bookingRef}.`}
+          </p>
+          <div className="pt-2 flex flex-col gap-2">
+            <Button asChild className="rounded-xl">
+              <Link href="/manage-booking">Search by Reference</Link>
+            </Button>
+            <Button variant="outline" asChild className="rounded-xl">
+              <Link href="/">Back to Home</Link>
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // Format date display
-  let formattedDate = departureDate;
-  try {
-    const d = new Date(departureDate);
-    if (!isNaN(d.getTime())) {
-      formattedDate = d.toLocaleDateString("en-US", {
+  const depTimeDate = pass.trip?.departureTime ? new Date(pass.trip.departureTime) : null;
+  const formattedDate = depTimeDate && !isNaN(depTimeDate.getTime())
+    ? depTimeDate.toLocaleDateString("en-US", {
         weekday: "short",
         day: "numeric",
         month: "short",
         year: "numeric"
-      });
-    }
-  } catch {
-    formattedDate = departureDate;
-  }
+      })
+    : "Scheduled Departure";
+
+  const departureTimeDisplay = depTimeDate && !isNaN(depTimeDate.getTime())
+    ? depTimeDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    : "TBD";
+
+  const arrTimeDate = pass.trip?.arrivalTime ? new Date(pass.trip.arrivalTime) : null;
+  const arrivalTimeDisplay = arrTimeDate && !isNaN(arrTimeDate.getTime())
+    ? arrTimeDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
+    : "TBD";
+
+  const qrPayload = pass.qrCodePayload || `https://islandhop.com/tickets/${pass.ticketNumber || bookingRef}`;
 
   return (
     <div className="dark:bg-background flex min-h-screen flex-col items-center justify-center bg-[#F8FAFC] px-4 py-20">
@@ -68,66 +104,75 @@ export default function ETicketPage({ params }: ETicketPageProps) {
         {/* Top Back and Print Actions */}
         <div className="mb-6 flex w-full items-center justify-between">
           <Button variant="ghost" size="sm" asChild className="text-xs font-semibold">
-            <Link
-              href={`/book/${trip.id}/confirmation?ref=${bookingRef}&departureDate=${encodeURIComponent(
-                departureDate
-              )}`}
-            >
-              <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Confirmation
+            <Link href={`/manage-booking/${pass.bookingReference}`}>
+              <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Manage Booking
             </Link>
           </Button>
 
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-lg"
+              size="sm"
+              className="h-8 rounded-lg gap-1.5 text-xs font-semibold"
               onClick={() => window.print()}
-              title="Print E-Ticket"
+              title="Print Boarding Pass"
             >
-              <Printer className="h-4 w-4" />
+              <Printer className="h-3.5 w-3.5" />
+              <span>Print</span>
             </Button>
           </div>
         </div>
 
-        <h1 className="text-foreground mb-6 text-2xl font-black tracking-tight sm:text-3xl">
-          Your E-Ticket
+        <h1 className="text-foreground mb-4 text-2xl font-black tracking-tight sm:text-3xl text-center">
+          Digital Boarding Pass
         </h1>
+        <p className="text-muted-foreground mb-6 text-xs text-center max-w-xs">
+          Maldives Transport &amp; Coast Guard approved digital travel document.
+        </p>
 
-        {/* Ticket Container */}
+        {/* Boarding Pass Ticket Container */}
         <div className="border-border/80 dark:bg-card w-full overflow-hidden rounded-3xl border bg-white shadow-xl">
-          {/* Navy Header Section */}
+          {/* Top Navy Blue Header Section */}
           <div className="bg-[#002244] p-6 text-white dark:bg-[#00172e]">
             <div className="flex items-center justify-between">
-              <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold tracking-widest uppercase backdrop-blur-sm">
-                CONFIRMED
+              <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-3 py-1 text-[10px] font-bold tracking-widest uppercase">
+                {pass.boardingStatus || "CONFIRMED"}
               </span>
               <span className="font-mono text-xs font-semibold text-white/80">
-                Ref: {bookingRef}
+                Ref: {pass.bookingReference}
               </span>
             </div>
 
             {/* Route Header */}
             <div className="mt-6 flex items-center justify-between">
-              <div className="text-2xl font-black tracking-tight">{trip.departurePort}</div>
-              <div className="flex flex-1 items-center justify-center px-4">
+              <div className="space-y-0.5 text-left max-w-[130px]">
+                <div className="text-[10px] uppercase font-bold text-white/70">Origin</div>
+                <div className="text-xl font-black tracking-tight truncate">{pass.trip.departurePort}</div>
+              </div>
+
+              <div className="flex flex-1 items-center justify-center px-3">
                 <div className="relative flex w-full items-center">
                   <div className="h-[2px] w-full border-t border-dashed border-white/40" />
                   <Sailboat className="absolute left-1/2 h-5 w-5 -translate-x-1/2 text-white" />
                   <div className="absolute right-0 h-2 w-2 rounded-full bg-white" />
                 </div>
               </div>
-              <div className="text-2xl font-black tracking-tight">{trip.arrivalPort}</div>
+
+              <div className="space-y-0.5 text-right max-w-[130px]">
+                <div className="text-[10px] uppercase font-bold text-white/70">Destination</div>
+                <div className="text-xl font-black tracking-tight truncate">{pass.trip.destinationPort}</div>
+              </div>
             </div>
 
             {/* Departure Date & Time */}
-            <div className="mt-6 flex items-center justify-between text-xs text-white/90">
+            <div className="mt-6 flex items-center justify-between text-xs text-white/90 border-t border-white/10 pt-3">
               <div className="flex items-center gap-1.5 font-medium">
+                <Calendar className="h-3.5 w-3.5" />
                 <span>{formattedDate}</span>
               </div>
               <div className="flex items-center gap-1.5 font-bold">
                 <Clock className="h-3.5 w-3.5" />
-                <span>{trip.departureTime}</span>
+                <span>{departureTimeDisplay} &rarr; {arrivalTimeDisplay}</span>
               </div>
             </div>
           </div>
@@ -141,30 +186,41 @@ export default function ETicketPage({ params }: ETicketPageProps) {
 
           {/* Ticket Body: Details */}
           <div className="space-y-4 px-6 py-2">
-            {/* Operator */}
-            <div className="space-y-1">
-              <div className="text-muted-foreground text-[10px] font-bold uppercase">Operator</div>
-              <div className="text-foreground flex items-center gap-2 font-bold">
-                <Ship className="h-4 w-4 text-[#003B95]" />
-                <span>{trip.operator}</span>
+            {/* Passenger & Ticket Number */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="text-muted-foreground text-[10px] font-bold uppercase">Passenger</div>
+                <div className="text-foreground font-bold text-sm truncate">{pass.passengerName}</div>
+                <div className="text-muted-foreground text-[11px]">
+                  {pass.nationality} &bull; {pass.passportOrId}
+                </div>
+              </div>
+
+              <div className="space-y-1 text-right">
+                <div className="text-muted-foreground text-[10px] font-bold uppercase">Ticket Number</div>
+                <div className="text-[#003B95] dark:text-blue-400 font-mono font-bold text-xs">
+                  {pass.ticketNumber}
+                </div>
+                <div className="text-muted-foreground text-[11px]">
+                  {pass.cabinClass} &bull; {pass.luggageCount} Bag
+                </div>
               </div>
             </div>
 
-            {/* Passengers */}
-            <div className="space-y-1.5 pt-2">
-              <div className="text-muted-foreground text-[10px] font-bold uppercase">
-                Passengers ({passengers.length})
+            {/* Operator & Vessel */}
+            <div className="grid grid-cols-2 gap-4 border-t border-border/60 pt-3">
+              <div className="space-y-0.5">
+                <div className="text-muted-foreground text-[10px] font-bold uppercase">Ferry Operator</div>
+                <div className="text-foreground flex items-center gap-1.5 font-bold text-xs">
+                  <Ship className="h-3.5 w-3.5 text-[#003B95]" />
+                  <span>{pass.trip.operatorName}</span>
+                </div>
               </div>
-              <div className="space-y-1">
-                {passengers.map((p, idx) => (
-                  <div
-                    key={idx}
-                    className="text-foreground flex items-center gap-2 text-xs font-semibold"
-                  >
-                    <span className="text-muted-foreground">•</span>
-                    <span>{p}</span>
-                  </div>
-                ))}
+
+              <div className="space-y-0.5 text-right">
+                <div className="text-muted-foreground text-[10px] font-bold uppercase">Ferry &amp; Gate</div>
+                <div className="text-foreground font-bold text-xs">{pass.trip.vesselName}</div>
+                <div className="text-muted-foreground text-[11px]">Gate: {pass.trip.gate || "Pier 1"}</div>
               </div>
             </div>
           </div>
@@ -177,22 +233,27 @@ export default function ETicketPage({ params }: ETicketPageProps) {
           </div>
 
           {/* QR Code Section */}
-          <div className="px-6 pt-2 pb-8 text-center">
+          <div className="px-6 pt-2 pb-8 text-center space-y-3">
             <div className="text-muted-foreground text-[11px] font-semibold">
-              Scan at boarding gate
+              Scan barcode at turnstile or hand to crew
             </div>
 
-            <div className="border-border/60 mx-auto my-4 flex w-fit items-center justify-center rounded-2xl border bg-white p-3 shadow-xs">
+            <div className="border-border/60 mx-auto flex w-fit items-center justify-center rounded-2xl border bg-white p-3 shadow-xs">
               <QRCodeSVG
-                value={`https://islandhop.com/tickets/${bookingRef}`}
+                value={qrPayload}
                 size={180}
                 level="H"
                 includeMargin={false}
               />
             </div>
 
-            <div className="text-foreground font-mono text-base font-black tracking-widest">
-              {bookingRef}
+            <div className="text-foreground font-mono text-xs font-black tracking-widest uppercase">
+              {pass.ticketNumber}
+            </div>
+
+            <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-emerald-600 font-semibold">
+              <ShieldCheck className="h-4 w-4" />
+              <span>Valid for departure on {formattedDate}</span>
             </div>
           </div>
         </div>

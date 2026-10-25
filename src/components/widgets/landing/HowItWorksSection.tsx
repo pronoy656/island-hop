@@ -14,7 +14,7 @@ const STEPS = [
     step: "01",
     title: "Search & Compare Departures",
     description:
-      "Select your departure harbor and island destination. Compare vessel transfer speeds, scheduled times, and transparent fixed fares with live seat availability.",
+      "Select your departure harbor and island destination. Compare ferry transfer speeds, scheduled times, and transparent fixed fares with live seat availability.",
     icon: Search
   },
   {

@@ -4,10 +4,7 @@ import Image from "next/image";
 import { Ship } from "lucide-react";
 
 import heroBg from "@/assets/routes/route-bg.png";
-
-import { POPULAR_ROUTES } from "@/data/routes";
-
-import { RouteCard, RouteSearchFilterBar, RoutesValueProps } from "@/widgets";
+import { ExploreRoutesGrid, RouteSearchFilterBar } from "@/widgets";
 import { AnimatedSection, Card, CardContent } from "@/ui";
 
 export const metadata: Metadata = {
@@ -78,29 +75,10 @@ export default function RoutesPage() {
         <RouteSearchFilterBar />
       </AnimatedSection>
 
-      {/* 3. Popular Routes Grid */}
-      <main className="container mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
-        <AnimatedSection delay={0.05} className="mb-6 space-y-1">
-          <h2 className="text-foreground text-2xl font-black tracking-tight sm:text-3xl">
-            Popular Routes
-          </h2>
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            Browse our most popular ferry routes and see what&apos;s possible.
-          </p>
-        </AnimatedSection>
-
-        {/* 6 Grid Route Cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {POPULAR_ROUTES.map((route) => (
-            <AnimatedSection key={route.id} delay={0.05}>
-              <RouteCard route={route} />
-            </AnimatedSection>
-          ))}
-        </div>
-
-        {/* 4. Bottom Value Proposition Feature Icons */}
-        <AnimatedSection delay={0.1} className="border-border/60 mt-20 border-t pt-10">
-          <RoutesValueProps />
+      {/* 3. Explore Ferry Routes Grid with Progressive "Load More" Pagination */}
+      <main className="container mx-auto mt-14 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <AnimatedSection delay={0.05}>
+          <ExploreRoutesGrid />
         </AnimatedSection>
       </main>
     </div>

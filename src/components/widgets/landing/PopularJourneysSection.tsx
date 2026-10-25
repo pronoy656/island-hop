@@ -1,95 +1,67 @@
-import Image from "next/image";
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  ChevronRight,
-  Clock,
-  Compass,
-  Flame,
-  Luggage,
-  Sparkles,
-  Star,
-  Waves,
-  Wifi,
-  Wind
-} from "lucide-react";
+import { ArrowRight, Compass } from "lucide-react";
 
-import maldivesImg from "@/assets/landing-page/maldives.png";
-import seaplaneImg from "@/assets/landing-page/seaplane.png";
-import tropicalImg from "@/assets/landing-page/tropical.png";
-import whiteSandImg from "@/assets/landing-page/whiteSand.png";
-
+import { POPULAR_ROUTES } from "@/data/routes";
+import { usePopularRoutesQuery } from "@/hooks";
+import type { IPopularJourney } from "@/types";
 import { Button } from "@/ui";
-import { cn } from "@/lib/utils";
+import { RouteCard, type RouteCardItem } from "@/components/widgets/booking/RouteCard";
 
-export const POPULAR_JOURNEYS = [
-  {
-    id: "journey-1",
-    from: "Malé",
-    to: "Maafushi",
-    duration: "Approx. 35 min",
-    price: 30,
-    frequency: "6 Daily Trips",
-    tag: "Most Popular",
-    tagColor: "bg-blue-600 text-white",
-    rating: 4.9,
-    reviews: 620,
-    highlights: ["Air Conditioned", "Fast Speedboat", "Free 20kg Bag"],
-    category: "speedboat",
-    image: maldivesImg,
-    imageAlt: "Aerial view of Malé to Maafushi turquoise atoll"
-  },
-  {
-    id: "journey-2",
-    from: "Malé",
-    to: "Thulusdhoo",
-    duration: "Approx. 45 min",
-    price: 30,
-    frequency: "4 Daily Trips",
-    tag: "Surfing Hotspot",
-    tagColor: "bg-emerald-600 text-white",
-    rating: 4.8,
-    reviews: 410,
-    highlights: ["Surfboard Allowed", "Scenic Deck", "Fast WiFi"],
-    category: "speedboat",
-    image: tropicalImg,
-    imageAlt: "Tropical island palm trees and white sand beach"
-  },
-  {
-    id: "journey-3",
-    from: "Malé",
-    to: "Dhiffushi",
-    duration: "Approx. 40 min",
-    price: 30,
-    frequency: "4 Daily Trips",
-    tag: "Lagoon Escape",
-    tagColor: "bg-indigo-600 text-white",
-    rating: 4.9,
-    reviews: 350,
-    highlights: ["Shaded Seating", "Sunset Cruise", "Snack Bar"],
-    category: "scenic",
-    image: seaplaneImg,
-    imageAlt: "Seaplane over azure ocean water in the Maldives"
-  },
-  {
-    id: "journey-4",
-    from: "Malé",
-    to: "Gulhi",
-    duration: "Approx. 30 min",
-    price: 30,
-    frequency: "5 Daily Trips",
-    tag: "Bikini Beach",
-    tagColor: "bg-amber-600 text-white",
-    rating: 4.9,
-    reviews: 512,
-    highlights: ["Quick 30m Transfer", "USB Charging", "Pristine Sands"],
-    category: "speedboat",
-    image: whiteSandImg,
-    imageAlt: "Speedboat anchored near tropical island limestone cliffs"
-  }
-];
+// Static fallback items structured for RouteCard
+export const POPULAR_JOURNEYS: RouteCardItem[] = POPULAR_ROUTES.slice(0, 4).map((r, idx) => ({
+  id: r.id,
+  from: r.from,
+  to: r.to,
+  description: r.description,
+  duration: r.duration,
+  trips: r.trips,
+  frequency: r.trips,
+  image: r.image,
+  startingPrice: 30,
+  price: 30,
+  highlights: ["Air Conditioned", "Fast Speedboat", "Free 20kg Bag"],
+  tag: idx === 0 ? "Most Popular" : "Popular Route",
+  tagColor: idx === 0 ? "bg-[#003B95] text-white" : "bg-emerald-600 text-white",
+  category: "speedboat"
+}));
 
 export function PopularJourneysSection() {
+  const { data: popularRoutes, isLoading } = usePopularRoutesQuery({ limit: 4 });
+
+  // Map live API data to RouteCardItem, falling back to static routes if empty
+  const journeys = React.useMemo<RouteCardItem[]>(() => {
+    if (popularRoutes && popularRoutes.length > 0) {
+      return popularRoutes.slice(0, 4).map((route: IPopularJourney, index: number) => ({
+        id: route.id || route.routeId || `popular-${index}`,
+        from: route.from,
+        to: route.to,
+        description:
+          route.description ||
+          `Regular departures connecting ${route.from} and ${route.to} with fast, comfortable marine transfers.`,
+        duration: route.duration || `${route.durationMinutes || 45} min`,
+        durationMinutes: route.durationMinutes,
+        price: route.startingPrice ?? route.price ?? 30,
+        startingPrice: route.startingPrice ?? route.price ?? 30,
+        frequency: route.frequency || `${route.dailyTripsCount || 4} Daily Trips`,
+        dailyTripsCount: route.dailyTripsCount,
+        tag: route.tag || (index === 0 ? "Most Popular" : "Popular Route"),
+        tagColor: route.tagColor || (index === 0 ? "bg-[#003B95] text-white" : "bg-emerald-600 text-white"),
+        highlights:
+          route.highlights && route.highlights.length > 0
+            ? route.highlights
+            : ["Fast Speedboat", "Air Conditioned", "Instant QR Pass"],
+        imageUrl: route.imageUrl,
+        category: route.category || "speedboat",
+        departurePort: route.departurePort,
+        destinationPort: route.destinationPort
+      }));
+    }
+    return POPULAR_JOURNEYS;
+  }, [popularRoutes]);
+
   return (
     <section id="schedules" className="pt-16 pb-6 md:pt-20 md:pb-8">
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -123,102 +95,28 @@ export function PopularJourneysSection() {
           </div>
         </div>
 
-        {/* Cards Grid */}
+        {/* Cards Grid using RouteCard from /routes */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {POPULAR_JOURNEYS.map((journey) => (
-            <div
-              key={journey.id}
-              className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/10"
-            >
-              <div>
-                {/* Image Container with Floating Badges */}
-                <div className="relative aspect-[16/11] w-full overflow-hidden rounded-2xl bg-muted">
-                  <Image
-                    src={journey.image}
-                    alt={journey.imageAlt}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-
-                  {/* Top Floating Tag */}
-                  <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide shadow-md backdrop-blur-md">
-                    <span className={cn("rounded-full px-2.5 py-0.5 shadow-xs", journey.tagColor)}>
-                      {journey.tag}
-                    </span>
-                  </div>
-
-                  {/* Top Right Rating Pill */}
-                  <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/55 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-md">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span>{journey.rating}</span>
-                  </div>
-
-                  {/* Bottom Duration & Frequency */}
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-[11px] font-bold text-white">
-                    <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 py-1 backdrop-blur-md shadow-xs">
-                      <Clock className="h-3 w-3 text-blue-300" />
-                      <span>{journey.duration}</span>
-                    </div>
-                    <div className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2.5 py-1 text-[10px] backdrop-blur-md shadow-xs">
-                      <Waves className="h-3 w-3 text-sky-300" />
-                      <span>{journey.frequency}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Route Title */}
-                <div className="mt-4 flex items-center gap-2 text-lg font-black text-foreground transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                  <span>{journey.from}</span>
-                  <ArrowRight className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 transition-transform group-hover:translate-x-1" />
-                  <span>{journey.to}</span>
-                </div>
-
-                {/* Micro Highlights Badges */}
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {journey.highlights.map((hl) => (
-                    <span
-                      key={hl}
-                      className="rounded-lg border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground"
-                    >
-                      {hl}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price & Action Footer */}
-              <div className="mt-5 flex items-center justify-between border-t border-border/60 pt-4">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
-                    FARES FROM
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-foreground leading-none">
-                      ${journey.price}
-                    </span>
-                    <span className="text-[11px] font-medium text-muted-foreground">/ person</span>
-                  </div>
-                </div>
-
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-9 gap-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 text-xs font-bold text-white shadow-md shadow-blue-600/20 transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg active:scale-95"
-                  asChild
+          {isLoading && journeys.length === 0
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-2xs animate-pulse flex flex-col justify-between"
                 >
-                  <Link
-                    href={`/routes?from=${encodeURIComponent(journey.from)}&to=${encodeURIComponent(journey.to)}`}
-                    className="flex items-center"
-                  >
-                    <span>View Trips</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          ))}
+                  <div className="h-48 bg-muted/60" />
+                  <div className="p-5 space-y-3">
+                    <div className="h-4 bg-muted/80 rounded w-3/4" />
+                    <div className="h-3 bg-muted/60 rounded w-1/2" />
+                    <div className="pt-3 border-t border-border/60 flex justify-between items-center">
+                      <div className="h-4 bg-muted rounded w-20" />
+                      <div className="h-8 bg-muted rounded-xl w-24" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            : journeys.map((route, idx) => (
+                <RouteCard key={route.id} route={route} index={idx} />
+              ))}
         </div>
       </div>
     </section>

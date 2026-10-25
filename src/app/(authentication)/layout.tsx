@@ -13,7 +13,7 @@ export default function AuthenticationLayout({ children }: { children: ReactNode
       <div className="relative hidden w-full overflow-hidden bg-slate-950 lg:flex lg:w-5/12 xl:w-1/2">
         <Image
           src={authBg}
-          alt="Cruise ferry vessel sailing on sea"
+          alt="Cruise ferry sailing on sea"
           fill
           priority
           sizes="(max-width: 1024px) 100vw, 50vw"

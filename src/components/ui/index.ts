@@ -20,3 +20,5 @@ export * from "./dialog";
 export * from "./tabs";
 export * from "./select";
 export * from "./calendar";
+export * from "./checkbox";
+export * from "./scroll-area";

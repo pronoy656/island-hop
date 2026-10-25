@@ -3,6 +3,9 @@ import { toast } from "sonner";
 import type {
   ApiResponse,
   IAdminAnalyticsOverview,
+  IAdminBookingFilterParams,
+  IAdminBookingItem,
+  IAdminBookingsResponseData,
   IAdminProviderDetail,
   IAdminProviderItem,
   IProviderStatusUpdatePayload,
@@ -21,7 +24,10 @@ export const adminKeys = {
   providerLists: () => [...adminKeys.providers(), "list"] as const,
   providerList: (params?: ProviderFilterParams) => [...adminKeys.providerLists(), params] as const,
   providerDetails: () => [...adminKeys.providers(), "detail"] as const,
-  providerDetail: (id: string) => [...adminKeys.providerDetails(), id] as const
+  providerDetail: (id: string) => [...adminKeys.providerDetails(), id] as const,
+  bookings: () => [...adminKeys.all, "bookings"] as const,
+  bookingLists: () => [...adminKeys.bookings(), "list"] as const,
+  bookingList: (params?: IAdminBookingFilterParams) => [...adminKeys.bookingLists(), params] as const
 };
 
 /**
@@ -147,3 +153,43 @@ export function useUpdateProviderStatusMutation() {
     }
   });
 }
+
+/**
+ * 5. Query: Fetch Paginated & Filtered Admin Platform Bookings
+ */
+export function useAdminBookingsQuery(params?: IAdminBookingFilterParams) {
+  return useQuery({
+    queryKey: adminKeys.bookingList(params),
+    queryFn: async ({ signal }) => {
+      const cleanParams: Record<string, string | number> = {};
+      if (params?.search && params.search.trim()) {
+        cleanParams.search = params.search.trim();
+      }
+      if (params?.status && params.status !== "ALL" && params.status !== "all" && params.status.trim()) {
+        cleanParams.status = params.status.toUpperCase();
+      }
+      if (params?.page) cleanParams.page = params.page;
+      if (params?.limit) cleanParams.limit = params.limit;
+
+      const response = await get<ApiResponse<IAdminBookingsResponseData>>("/admin/bookings", {
+        params: cleanParams,
+        signal
+      });
+
+      return (
+        response.data ?? {
+          meta: {
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 20,
+            total: 0,
+            totalPages: 1
+          },
+          data: []
+        }
+      );
+    },
+    staleTime: 1000 * 30, // 30 seconds
+    placeholderData: (previousData) => previousData
+  });
+}
+

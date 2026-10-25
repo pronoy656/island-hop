@@ -43,6 +43,19 @@ export function MobileNavbar() {
     isAuthenticated &&
     (user?.role?.toUpperCase() === "PASSENGER" || user?.role?.toUpperCase() === "USER");
 
+  const dashboardHref = (() => {
+    const role = (user?.role || "").toUpperCase();
+    if (role === "ADMIN" || role === "SUPER_ADMIN") return "/dashboard/admin";
+    if (role === "OPERATOR") return "/dashboard/operator";
+    return "/manage-booking";
+  })();
+
+  const displayRole = (() => {
+    const role = (user?.role || "").toUpperCase();
+    if (role === "USER") return "PASSENGER";
+    return user?.role || "";
+  })();
+
   const visibleNavLinks = NAV_LINKS.filter((link) => {
     if (link.href === "/manage-booking") {
       return isPassenger;
@@ -145,12 +158,16 @@ export function MobileNavbar() {
                       asChild
                       onClick={() => setIsOpen(false)}
                     >
-                      <Link href="/dashboard">
-                        <LayoutDashboard className="h-4 w-4 text-blue-600" />
-                        <span>{user?.name || "Dashboard"}</span>
+                      <Link href={dashboardHref}>
+                        {isPassenger ? (
+                          <Ticket className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <LayoutDashboard className="h-4 w-4 text-blue-600" />
+                        )}
+                        <span>{user?.name || (isPassenger ? "My Bookings" : "Dashboard")}</span>
                         {user?.role && (
                           <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-auto">
-                            {user.role}
+                            {displayRole}
                           </span>
                         )}
                       </Link>

@@ -1,28 +1,36 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
   ApiResponse,
+  IConnectedPort,
+  ICreatePortPayload,
   ICreateRoutePayload,
+  IPopularJourney,
+  IPopularRoutesParams,
   IPort,
   IPortListResponse,
   IRoute,
   IRouteFilterParams,
   IRouteListResponse,
+  IUpdatePortPayload,
   IUpdateRoutePayload
 } from "@/types";
 
 import { del, get, patch, post } from "@/lib/api";
 
 /**
- * Route Query Key Factory
+ * Route & Port Query Key Factory
  */
 export const routeKeys = {
   all: ["routes"] as const,
   lists: () => [...routeKeys.all, "list"] as const,
   list: (params?: IRouteFilterParams) => [...routeKeys.lists(), params] as const,
+  popular: (params?: IPopularRoutesParams) => [...routeKeys.all, "popular", params] as const,
   details: () => [...routeKeys.all, "detail"] as const,
   detail: (id: string) => [...routeKeys.details(), id] as const,
-  ports: ["ports"] as const
+  ports: ["ports"] as const,
+  connectedPorts: ["routes", "connected-ports"] as const,
+  adminPorts: (params?: Record<string, unknown>) => ["admin", "ports", params] as const
 };
 
 /**
@@ -35,6 +43,9 @@ export function useRoutesQuery(params?: IRouteFilterParams) {
       const cleanParams: Record<string, string | number> = {};
       if (params?.status && params.status !== "ALL" && params.status.trim()) {
         cleanParams.status = params.status;
+      }
+      if (params?.search && params.search.trim()) {
+        cleanParams.search = params.search.trim();
       }
       if (params?.page) cleanParams.page = params.page;
       if (params?.limit) cleanParams.limit = params.limit;
@@ -53,6 +64,7 @@ export function useRoutesQuery(params?: IRouteFilterParams) {
         pagination
       };
     },
+    placeholderData: keepPreviousData,
     staleTime: 0,
     refetchOnWindowFocus: true,
     retry: (failureCount, error) => {
@@ -200,3 +212,167 @@ export function useDeleteRouteMutation() {
     }
   });
 }
+
+/**
+ * 6. Query: Fetch Connected Ports (Customer Booking Search)
+ * Returns active departure ports along with their connected destination ports
+ */
+export function useConnectedPortsQuery() {
+  return useQuery({
+    queryKey: routeKeys.connectedPorts,
+    queryFn: async ({ signal }) => {
+      const response = await get<ApiResponse<IConnectedPort[]>>("/routes/ports", {
+        signal
+      });
+      return response.data ?? [];
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
+}
+
+/**
+ * 7. Query: Fetch Popular Routes (Public Landing Page Showcase)
+ * Retrieves top curated and booked ferry routes with live schedules & fares
+ */
+export function usePopularRoutesQuery(params?: IPopularRoutesParams) {
+  return useQuery<IPopularJourney[]>({
+    queryKey: routeKeys.popular(params),
+    queryFn: async ({ signal }) => {
+      const cleanParams: Record<string, string | number> = {};
+      if (params?.limit) cleanParams.limit = params.limit;
+      if (params?.category && params.category !== "all") {
+        cleanParams.category = params.category;
+      }
+
+      const response = await get<ApiResponse<IPopularJourney[]>>("/routes/popular", {
+        params: cleanParams,
+        signal
+      });
+
+      return Array.isArray(response.data) ? response.data : [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
+}
+
+/**
+ * 8. Query: Fetch Admin Ports (Paginated & Filterable)
+ */
+export function useAdminPortsQuery(params?: {
+  page?: number;
+  limit?: number;
+  searchTerm?: string;
+  search?: string;
+  isActive?: boolean;
+}) {
+  return useQuery({
+    queryKey: routeKeys.adminPorts(params),
+    queryFn: async ({ signal }) => {
+      const cleanParams: Record<string, string | number | boolean> = {};
+      if (params?.page) cleanParams.page = params.page;
+      if (params?.limit) cleanParams.limit = Math.min(params.limit, 100);
+      const searchQuery = params?.search || params?.searchTerm;
+      if (searchQuery) {
+        cleanParams.search = searchQuery;
+        cleanParams.searchTerm = searchQuery;
+      }
+      if (typeof params?.isActive === "boolean") cleanParams.isActive = params.isActive;
+
+      const response = await get<ApiResponse<IPortListResponse>>("/ports", {
+        params: cleanParams,
+        signal
+      });
+
+      return (
+        response.data ?? {
+          data: [],
+          meta: { page: 1, limit: 20, total: 0, totalPages: 1 }
+        }
+      );
+    },
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true
+  });
+}
+
+/**
+ * 8. Mutation: Super Admin Create Port
+ */
+export function useCreatePortMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ICreatePortPayload) => {
+      return await post<ApiResponse<IPort>>("/ports", payload);
+    },
+    onSuccess: async (response) => {
+      await queryClient.invalidateQueries({ queryKey: routeKeys.ports });
+      await queryClient.invalidateQueries({ queryKey: routeKeys.connectedPorts });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "ports"] });
+      toast.success(response.message || "Port created successfully!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create port");
+    }
+  });
+}
+
+/**
+ * 9. Mutation: Super Admin Update Port
+ */
+export function useUpdatePortMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload
+    }: {
+      id: string;
+      payload: IUpdatePortPayload;
+    }) => {
+      return await patch<ApiResponse<IPort>>(`/ports/${id}`, payload);
+    },
+    onSuccess: async (response) => {
+      await queryClient.invalidateQueries({ queryKey: routeKeys.ports });
+      await queryClient.invalidateQueries({ queryKey: routeKeys.connectedPorts });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "ports"] });
+      toast.success(response.message || "Port updated successfully!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update port");
+    }
+  });
+}
+
+/**
+ * 10. Mutation: Super Admin Delete Port
+ */
+export function useDeletePortMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await del<ApiResponse<null>>(`/ports/${id}`);
+    },
+    onSuccess: async (response) => {
+      await queryClient.invalidateQueries({ queryKey: routeKeys.ports });
+      await queryClient.invalidateQueries({ queryKey: routeKeys.connectedPorts });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "ports"] });
+
+      if (response?.message?.toLowerCase().includes("deactivated")) {
+        toast.info(response.message);
+      } else {
+        toast.success(response?.message || "Port permanently deleted successfully!");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete port");
+    }
+  });
+}
+

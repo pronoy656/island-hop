@@ -2,39 +2,68 @@
 
 import Image from "next/image";
 import Link from "next/link";
-
 import { ArrowRight, Ship } from "lucide-react";
 import { useQueryStates } from "nuqs";
 
 import { bookingSearchParamsParsers, extractPassengerCount } from "@/schemas/booking-params";
-
+import type { ISearchedTrip } from "@/types";
 import type { FerryTrip } from "@/data/ferries";
-
+import { getDynamicVesselImage } from "@/data/media-catalog";
 import { Badge, Button, Card, CardContent } from "@/ui";
 
+const FERRY_IMAGES = [
+  "https://images.unsplash.com/photo-1545647274-96644da34363?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1694428733861-620550edd3c5?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1787945832826-f299aebdef7e?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1760465789372-965a150847db?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1780553562886-528452a6b697?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1778576402928-9a573311f30e?auto=format&fit=crop&w=800&q=80"
+];
+
 interface FerryCardProps {
-  trip: FerryTrip;
+  trip: ISearchedTrip | FerryTrip;
+  fromPortName?: string;
+  toPortName?: string;
 }
 
-export function FerryCard({ trip }: FerryCardProps) {
+export function FerryCard({ trip, fromPortName, toPortName }: FerryCardProps) {
   const [params] = useQueryStates(bookingSearchParamsParsers);
   const numericCount = extractPassengerCount(params.passengers);
 
-  const reviewUrl = `/book/${trip.id}/review?passengers=${numericCount}&departureDate=${encodeURIComponent(
+  const adults = parseInt(params.adults || "1", 10) || 1;
+  const children = parseInt(params.children || "0", 10) || 0;
+  const totalCount = adults + children;
+
+  const tripId = "tripId" in trip ? trip.tripId : trip.id;
+  const operatorName = trip.operator;
+  const vesselName = "vessel" in trip ? trip.vessel : trip.vesselName;
+  const price = "pricePerAdult" in trip ? trip.pricePerAdult : trip.price;
+  const departurePort = ("departurePort" in trip && trip.departurePort) || fromPortName || params.from;
+  const arrivalPort = ("destinationPort" in trip && trip.destinationPort) || ("arrivalPort" in trip && trip.arrivalPort) || toPortName || params.to;
+  const availableSeats = trip.availableSeats;
+
+  // Stable image selection based on tripId string hash
+  const imageIndex = Math.abs(
+    tripId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  ) % FERRY_IMAGES.length;
+  const vesselType = "vesselType" in trip ? trip.vesselType : "SPEEDBOAT";
+  const imageSrc = ("image" in trip && trip.image) ? trip.image : getDynamicVesselImage(vesselType, tripId);
+
+  const reviewUrl = `/book/${tripId}/review?passengers=${totalCount}&adults=${adults}&children=${children}&departureDate=${encodeURIComponent(
     params.departureDate
-  )}&from=${encodeURIComponent(params.from)}&to=${encodeURIComponent(params.to)}&tripType=${
+  )}&from=${encodeURIComponent(departurePort)}&to=${encodeURIComponent(arrivalPort)}&tripType=${
     params.tripType
-  }`;
+  }${params.tripType === "round-trip" && params.returnDate ? `&returnDate=${encodeURIComponent(params.returnDate)}` : ""}`;
 
   return (
     <Card className="group border-border bg-card hover:border-primary/40 overflow-hidden rounded-2xl p-0 shadow-sm transition-all duration-200 hover:shadow-md">
       <CardContent className="p-4">
         <div className="flex flex-col lg:flex-row">
-          {/* Left: Ferry Vessel Image */}
+          {/* Left: Ferry Image */}
           <div className="bg-muted relative h-48 w-full overflow-hidden rounded-md lg:h-auto lg:w-72 lg:shrink-0">
             <Image
-              src={trip.image}
-              alt={`${trip.operator} - ${trip.vesselName}`}
+              src={imageSrc}
+              alt={`${operatorName} - ${vesselName}`}
               fill
               sizes="(max-width: 1024px) 100vw, 288px"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -50,7 +79,10 @@ export function FerryCard({ trip }: FerryCardProps) {
                   <div className="bg-primary/10 text-primary flex h-7 w-7 items-center justify-center rounded-lg">
                     <Ship className="h-4 w-4" />
                   </div>
-                  <h3 className="text-foreground text-base font-bold">{trip.operator}</h3>
+                  <div>
+                    <h3 className="text-foreground text-base font-bold">{operatorName}</h3>
+                    <p className="text-muted-foreground text-xs">{vesselName}</p>
+                  </div>
                 </div>
 
                 <Badge
@@ -58,7 +90,7 @@ export function FerryCard({ trip }: FerryCardProps) {
                   className="gap-1.5 border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  {trip.availableSeats} seats available
+                  {availableSeats} seats available
                 </Badge>
               </div>
 
@@ -73,7 +105,7 @@ export function FerryCard({ trip }: FerryCardProps) {
                     {trip.departureTime}
                   </div>
                   <div className="text-muted-foreground text-xs font-medium">
-                    {trip.departurePort}
+                    {departurePort}
                   </div>
                 </div>
 
@@ -102,7 +134,7 @@ export function FerryCard({ trip }: FerryCardProps) {
                     {trip.arrivalTime}
                   </div>
                   <div className="text-muted-foreground text-xs font-medium">
-                    {trip.arrivalPort}
+                    {arrivalPort}
                   </div>
                 </div>
 
@@ -113,7 +145,7 @@ export function FerryCard({ trip }: FerryCardProps) {
                       FROM
                     </span>
                     <div className="text-foreground text-2xl font-black sm:text-3xl">
-                      ${trip.price}
+                      ${price}
                     </div>
                     <div className="text-muted-foreground text-[10px]">/ per passenger</div>
                   </div>

@@ -58,13 +58,47 @@ export function LoginForm() {
 
   const getDestination = (resUserRole?: string) => {
     const fromParam = searchParams.get("redirect") || searchParams.get("from");
-    if (fromParam) return fromParam;
-    const normalizedRole = (resUserRole || "").toLowerCase();
-    if (normalizedRole === "admin" || normalizedRole === "super_admin") {
+    const normalizedRole = (resUserRole || "").toUpperCase();
+
+    // Validate fromParam against user's actual role
+    if (fromParam && fromParam.startsWith("/")) {
+      if (normalizedRole === "ADMIN" || normalizedRole === "SUPER_ADMIN") {
+        // Admin cannot access operator routes or passenger portal
+        if (
+          !fromParam.startsWith("/dashboard/operator") &&
+          !fromParam.startsWith("/manage-booking")
+        ) {
+          return fromParam;
+        }
+      } else if (normalizedRole === "OPERATOR") {
+        // Operator cannot access admin routes or passenger portal
+        if (
+          !fromParam.startsWith("/dashboard/admin") &&
+          !fromParam.startsWith("/admin") &&
+          !fromParam.startsWith("/manage-booking")
+        ) {
+          return fromParam;
+        }
+      } else {
+        // Passenger / User cannot access admin or operator dashboards
+        if (
+          !fromParam.startsWith("/dashboard/admin") &&
+          !fromParam.startsWith("/admin") &&
+          !fromParam.startsWith("/dashboard/operator")
+        ) {
+          return fromParam;
+        }
+      }
+    }
+
+    if (normalizedRole === "ADMIN" || normalizedRole === "SUPER_ADMIN") {
       return "/dashboard/admin";
     }
-    if (normalizedRole === "operator") {
-      return "/dashboard/operator/ferries";
+    if (normalizedRole === "OPERATOR") {
+      return "/dashboard/operator";
+    }
+    if (normalizedRole === "USER" || normalizedRole === "PASSENGER") {
+      return "/manage-booking";
     }
     return "/";
   };

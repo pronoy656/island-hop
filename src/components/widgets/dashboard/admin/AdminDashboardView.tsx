@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
   AlertCircle,
   Building2,
@@ -77,36 +76,6 @@ export function AdminDashboardView() {
     setBookingsTimeRange(range);
   };
 
-  // Map real backend analytics into formatted table rows
-  const recentBookings: RecentBookingItem[] = React.useMemo(() => {
-    if (!analytics?.recentBookings) return [];
-    return analytics.recentBookings.map((b) => ({
-      id: b.id,
-      bookingReference: b.reference,
-      passenger: b.leadPassengerName,
-      route: b.route,
-      amount: b.totalAmount,
-      status:
-        b.status === "CONFIRMED"
-          ? "Confirmed"
-          : b.status === "CANCELLED"
-            ? "Cancelled"
-            : b.status === "CHECKED_IN"
-              ? "Confirmed"
-              : b.status
-    }));
-  }, [analytics?.recentBookings]);
-
-  const recentProviders: RecentProviderItem[] = React.useMemo(() => {
-    if (!analytics?.recentProviders) return [];
-    return analytics.recentProviders.map((p) => ({
-      id: p.id,
-      provider: p.companyName,
-      contactPerson: p.contactPersonName,
-      totalFerries: p.ferriesCount,
-      status: p.status === "ACTIVE" ? "Active" : p.status === "SUSPENDED" ? "Suspended" : p.status
-    }));
-  }, [analytics?.recentProviders]);
 
   // Derive payment records from real backend financial & booking metrics
   const recentPayments: RecentPaymentItem[] = React.useMemo(() => {
@@ -154,83 +123,6 @@ export function AdminDashboardView() {
     ];
   }, [analytics?.bookings?.total, analytics?.passengers?.totalPax]);
 
-  // Streamlined columns for Recent Bookings (Side-by-side card)
-  const bookingColumns: TableColumn<RecentBookingItem>[] = [
-    {
-      header: "REFERENCE",
-      accessorKey: "bookingReference",
-      className: "font-mono font-medium text-slate-700 dark:text-slate-300 text-[11px]"
-    },
-    {
-      header: "PASSENGER",
-      accessorKey: "passenger",
-      className: "font-semibold text-foreground truncate max-w-[120px]"
-    },
-    {
-      header: "ROUTE",
-      accessorKey: "route",
-      className: "text-foreground font-medium text-xs truncate max-w-[140px]"
-    },
-    {
-      header: "AMOUNT",
-      className: "font-bold text-foreground",
-      cell: (item) => `$${item.amount.toFixed(2)}`
-    },
-    {
-      header: "STATUS",
-      cell: (item) => <StatusBadge status={item.status} />
-    },
-    {
-      header: "ACTION",
-      align: "right",
-      headerClassName: "text-right",
-      cell: (item) => (
-        <Link
-          href={`/manage-booking/${item.bookingReference}`}
-          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold hover:underline transition-colors"
-        >
-          View
-        </Link>
-      )
-    }
-  ];
-
-  // Streamlined columns for Recent Providers (Side-by-side card)
-  const providerColumns: TableColumn<RecentProviderItem>[] = [
-    {
-      header: "OPERATOR",
-      accessorKey: "provider",
-      className: "font-semibold text-foreground truncate max-w-[150px]"
-    },
-    {
-      header: "CONTACT PERSON",
-      accessorKey: "contactPerson",
-      className: "text-muted-foreground font-medium truncate max-w-[130px]"
-    },
-    {
-      header: "FERRIES",
-      accessorKey: "totalFerries",
-      className: "text-center text-foreground font-medium",
-      align: "center"
-    },
-    {
-      header: "STATUS",
-      cell: (item) => <StatusBadge status={item.status} />
-    },
-    {
-      header: "ACTION",
-      align: "right",
-      headerClassName: "text-right",
-      cell: (item) => (
-        <Link
-          href={`/dashboard/admin/providers/${item.id}`}
-          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold hover:underline transition-colors"
-        >
-          View Operator
-        </Link>
-      )
-    }
-  ];
 
   // Columns for Recent Payments
   const paymentColumns: TableColumn<RecentPaymentItem>[] = [
@@ -305,9 +197,6 @@ export function AdminDashboardView() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Dashboard
             </h1>
-            <span className="bg-primary/10 text-primary border-primary/20 hidden sm:inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold">
-              Live Metrics
-            </span>
           </div>
           <p className="text-muted-foreground text-xs sm:text-sm">
             Overview of FerryGo platform activity and real-time operations.
@@ -495,38 +384,6 @@ export function AdminDashboardView() {
         />
       </div>
 
-      {/* Row with Recent Bookings and Recent Providers Side-by-Side */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 items-stretch">
-        {/* Section: Recent Bookings */}
-        {isLoading ? (
-          <div className="h-72 rounded-xl border border-border/60 bg-muted/20 animate-pulse p-4" />
-        ) : (
-          <DashboardTableCard
-            title="Recent Bookings"
-            viewAllHref="/dashboard/admin/bookings"
-            columns={bookingColumns}
-            data={recentBookings}
-            keyExtractor={(item) => item.id}
-            className="h-full"
-            emptyMessage="No customer reservations recorded yet."
-          />
-        )}
-
-        {/* Section: Recent Providers */}
-        {isLoading ? (
-          <div className="h-72 rounded-xl border border-border/60 bg-muted/20 animate-pulse p-4" />
-        ) : (
-          <DashboardTableCard
-            title="Recent Operators"
-            viewAllHref="/dashboard/admin/providers"
-            columns={providerColumns}
-            data={recentProviders}
-            keyExtractor={(item) => item.id}
-            className="h-full"
-            emptyMessage="No registered operators found. New operator registrations will appear here."
-          />
-        )}
-      </div>
 
       {/* Section: Recent Payments (Full Width) */}
       {isLoading ? (

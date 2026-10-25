@@ -107,11 +107,13 @@ export const vesselTypeEnum = z.enum(["CATAMARAN", "SPEEDBOAT", "TRADITIONAL_FER
 export const vesselStatusEnum = z.enum(["IN_SERVICE", "MAINTENANCE", "OUT_OF_SERVICE"]);
 
 export const createFerrySchema = z.object({
-  name: z.string().min(2, "Vessel name must be at least 2 characters"),
+  name: z.string().min(2, "Ferry name must be at least 2 characters"),
   registration: z.string().min(2, "Registration number is required"),
   capacity: z.coerce.number().int().positive("Capacity must be at least 1 passenger"),
   type: vesselTypeEnum.default("CATAMARAN"),
-  status: vesselStatusEnum.default("IN_SERVICE")
+  status: vesselStatusEnum.default("IN_SERVICE"),
+  imageUrl: z.string().optional(),
+  amenities: z.array(z.string()).optional()
 });
 
 export const updateFerrySchema = createFerrySchema.partial();

@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 
 export default function ManageBookingsPage() {
   return (
-    <div className="dark:bg-background min-h-screen bg-[#F8FAFC] pb-20">
-      <main className="container mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+    <div className="dark:bg-background min-h-screen bg-[#F8FAFC]">
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 pb-20">
         {/* Top Header */}
         <AnimatedSection
           initial={{ opacity: 0, y: 15 }}
@@ -45,7 +45,7 @@ export default function ManageBookingsPage() {
             <ManageBookingsTable />
           </Suspense>
         </AnimatedSection>
-      </main>
+      </div>
     </div>
   );
 }

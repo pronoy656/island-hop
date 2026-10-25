@@ -6,3 +6,5 @@ export * from "./booking";
 export * from "./under-construction";
 export * from "./dashboard";
 export * from "./verify-email";
+
+export * from "./booking/BookingResultsList";

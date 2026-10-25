@@ -135,16 +135,16 @@ export function useCreateFerryMutation() {
       await queryClient.invalidateQueries({ queryKey: ferryKeys.all, refetchType: "all" });
       await queryClient.refetchQueries({ queryKey: ferryKeys.all });
 
-      toast.success(response.message || "Vessel registered successfully!");
+      toast.success(response.message || "Ferry registered successfully!");
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to register vessel");
+      toast.error(error.message || "Failed to register ferry");
     }
   });
 }
 
 /**
- * 4. Mutation: Update Vessel Details and Status
+ * 4. Mutation: Update Ferry Details and Status
  */
 export function useUpdateFerryMutation() {
   const queryClient = useQueryClient();
@@ -173,16 +173,16 @@ export function useUpdateFerryMutation() {
       await queryClient.invalidateQueries({ queryKey: ferryKeys.all, refetchType: "all" });
       await queryClient.refetchQueries({ queryKey: ferryKeys.all });
 
-      toast.success(response.message || "Vessel specifications updated successfully!");
+      toast.success(response.message || "Ferry updated successfully!");
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to update vessel");
+      toast.error(error.message || "Failed to update ferry");
     }
   });
 }
 
 /**
- * 5. Mutation: Remove / Decommission Vessel from Fleet
+ * 5. Mutation: Remove Ferry
  */
 export function useDeleteFerryMutation() {
   const queryClient = useQueryClient();
@@ -208,10 +208,10 @@ export function useDeleteFerryMutation() {
       await queryClient.invalidateQueries({ queryKey: ferryKeys.all, refetchType: "all" });
       await queryClient.refetchQueries({ queryKey: ferryKeys.all });
 
-      toast.success(response.message || "Vessel successfully removed from fleet.");
+      toast.success(response.message || "Ferry successfully removed.");
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete vessel");
+      toast.error(error.message || "Failed to delete ferry");
     }
   });
 }

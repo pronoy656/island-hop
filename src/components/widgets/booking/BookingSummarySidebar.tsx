@@ -1,15 +1,24 @@
 "use client";
 
 import type { ReactNode } from "react";
-
 import { Ship } from "lucide-react";
-
-import type { FerryTrip } from "@/data/ferries";
-
 import { Card, CardContent } from "@/ui";
 
+interface TripSummaryData {
+  price?: number;
+  adultFare?: number;
+  totalPrice?: number;
+  departurePort?: string;
+  arrivalPort?: string;
+  destinationPort?: string;
+  departureTime?: string;
+  duration?: string;
+  operator?: string;
+  [key: string]: any;
+}
+
 interface BookingSummarySidebarProps {
-  trip: FerryTrip;
+  trip: TripSummaryData;
   passengerCount: number;
   departureDate?: string;
   actionButton?: ReactNode;
@@ -25,7 +34,10 @@ export function BookingSummarySidebar({
   secondaryButton,
   title = "Your booking"
 }: BookingSummarySidebarProps) {
-  const totalPrice = trip.price * passengerCount;
+  const farePerPassenger = trip.price ?? trip.adultFare ?? 25;
+  const totalPrice = trip.totalPrice ?? farePerPassenger * passengerCount;
+  const depPort = trip.departurePort || "Departure Port";
+  const arrPort = trip.arrivalPort || trip.destinationPort || "Destination Port";
 
   // Format departure date nicely if valid ISO
   let displayDate = departureDate;
@@ -55,7 +67,7 @@ export function BookingSummarySidebar({
             <div className="text-foreground flex items-center gap-1.5 font-bold">
               <Ship className="h-3.5 w-3.5 shrink-0 text-[#003B95]" />
               <span>
-                {trip.departurePort} &rarr; {trip.arrivalPort}
+                {depPort} &rarr; {arrPort}
               </span>
             </div>
           </div>
@@ -65,10 +77,12 @@ export function BookingSummarySidebar({
             <span className="text-foreground font-semibold">{displayDate}</span>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground font-medium">Departure</span>
-            <span className="text-foreground font-semibold">{trip.departureTime}</span>
-          </div>
+          {trip.departureTime && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground font-medium">Departure</span>
+              <span className="text-foreground font-semibold">{trip.departureTime}</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground font-medium">Passengers</span>
@@ -84,7 +98,7 @@ export function BookingSummarySidebar({
         <div className="space-y-2">
           <div className="text-muted-foreground flex items-center justify-between text-xs">
             <span>
-              Fare (${trip.price} &times; {passengerCount})
+              Tickets (${farePerPassenger} &times; {passengerCount})
             </span>
             <span className="text-foreground font-medium">${totalPrice}</span>
           </div>

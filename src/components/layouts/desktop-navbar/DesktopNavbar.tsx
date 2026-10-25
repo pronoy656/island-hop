@@ -42,6 +42,19 @@ export function DesktopNavbar() {
     isAuthenticated &&
     (user?.role?.toUpperCase() === "PASSENGER" || user?.role?.toUpperCase() === "USER");
 
+  const dashboardHref = (() => {
+    const role = (user?.role || "").toUpperCase();
+    if (role === "ADMIN" || role === "SUPER_ADMIN") return "/dashboard/admin";
+    if (role === "OPERATOR") return "/dashboard/operator";
+    return "/manage-booking";
+  })();
+
+  const displayRole = (() => {
+    const role = (user?.role || "").toUpperCase();
+    if (role === "USER") return "PASSENGER";
+    return user?.role || "";
+  })();
+
   const visibleNavLinks = NAV_LINKS.filter((link) => {
     if (link.href === "/manage-booking") {
       return isPassenger;
@@ -109,14 +122,18 @@ export function DesktopNavbar() {
                 className="h-9 gap-2 rounded-xl border-border/80 bg-background/60 px-3.5 text-xs font-bold shadow-xs hover:bg-accent/80 hover:text-foreground backdrop-blur-xs transition-all"
                 asChild
               >
-                <Link href="/dashboard">
+                <Link href={dashboardHref}>
                   <div className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-600/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400">
-                    <LayoutDashboard className="h-3.5 w-3.5" />
+                    {isPassenger ? (
+                      <Ticket className="h-3.5 w-3.5" />
+                    ) : (
+                      <LayoutDashboard className="h-3.5 w-3.5" />
+                    )}
                   </div>
-                  <span>{user?.name || "Dashboard"}</span>
+                  <span>{user?.name || (isPassenger ? "My Bookings" : "Dashboard")}</span>
                   {user?.role && (
                     <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {user.role}
+                      {displayRole}
                     </span>
                   )}
                 </Link>

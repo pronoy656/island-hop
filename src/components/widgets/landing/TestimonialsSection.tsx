@@ -23,7 +23,7 @@ const TESTIMONIALS = [
     rating: 5,
     date: "Weekly Commuter",
     comment:
-      "I commute for surf coaching and business weekly. Having live vessel tracking and instant Apple Wallet passes is a game changer. The schedules are always 100% accurate."
+      "I commute for surf coaching and business weekly. Having live ferry tracking and instant Apple Wallet passes is a game changer. The schedules are always 100% accurate."
   },
   {
     id: "t-3",

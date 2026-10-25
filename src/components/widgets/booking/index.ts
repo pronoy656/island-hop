@@ -9,3 +9,4 @@ export * from "./RoutesValueProps";
 export * from "./PortCombobox";
 export * from "./ManageBookingsTable";
 export * from "./PassengerSelector";
+export * from "./ExploreRoutesGrid";

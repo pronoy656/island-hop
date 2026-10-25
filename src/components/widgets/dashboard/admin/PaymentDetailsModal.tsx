@@ -138,7 +138,7 @@ export function PaymentDetailsModal({
 
             <div className="space-y-2 text-xs divide-y divide-border/60">
               <div className="flex items-center justify-between pt-1">
-                <span className="text-muted-foreground">Gross Booking Fare:</span>
+                <span className="text-muted-foreground">Gross Ticket Amount:</span>
                 <span className="font-bold text-foreground text-sm">
                   ${payment.bookingAmount.toFixed(2)}
                 </span>

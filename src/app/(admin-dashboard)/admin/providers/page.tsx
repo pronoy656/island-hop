@@ -105,7 +105,7 @@ export default function AdminProvidersPage() {
           Operators
         </h1>
         <p className="text-muted-foreground text-xs sm:text-sm">
-          Manage registered commercial ferry operators and fleet vessels ({data?.meta?.total ?? providers.length} registered operators).
+          Manage registered commercial ferry operators and fleet ferries ({data?.meta?.total ?? providers.length} registered operators).
         </p>
       </div>
 

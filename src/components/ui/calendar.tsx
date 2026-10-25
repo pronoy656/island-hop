@@ -19,7 +19,10 @@ import {
   isToday,
   format,
   parseISO,
-  isValid
+  isValid,
+  startOfDay,
+  isBefore,
+  isAfter
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -111,24 +114,26 @@ export function Calendar({
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isTodayDay = isToday(day);
 
-          let isDisabled = false;
-          if (minDate && day < startOfMonth(minDate) && !isSameDay(day, minDate)) {
-            // optional min check
-          }
+          const dayStart = startOfDay(day);
+          const isBeforeMin = minDate ? isBefore(dayStart, startOfDay(minDate)) : false;
+          const isAfterMax = maxDate ? isAfter(dayStart, startOfDay(maxDate)) : false;
+          const isDisabled = isBeforeMin || isAfterMax;
 
           return (
             <button
               key={idx}
               type="button"
               disabled={isDisabled}
-              onClick={() => onSelect && onSelect(day)}
+              onClick={() => !isDisabled && onSelect && onSelect(day)}
               className={cn(
-                "h-8 w-8 text-xs rounded-md font-medium flex items-center justify-center transition-colors cursor-pointer",
+                "h-8 w-8 text-xs rounded-md font-medium flex items-center justify-center transition-colors",
+                !isDisabled && "cursor-pointer",
                 !isCurrentMonth && "text-muted-foreground/40",
-                isCurrentMonth && !isSelectedDay && "text-foreground hover:bg-muted",
+                isCurrentMonth && !isSelectedDay && !isDisabled && "text-foreground hover:bg-muted",
                 isTodayDay && !isSelectedDay && "border border-blue-500 font-bold text-blue-600 dark:text-blue-400",
                 isSelectedDay &&
-                  "bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-xs"
+                  "bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-xs",
+                isDisabled && "opacity-25 cursor-not-allowed hover:bg-transparent"
               )}
             >
               {format(day, "d")}
@@ -147,6 +152,8 @@ export interface DatePickerProps {
   className?: string;
   id?: string;
   formatStr?: string;
+  minDate?: Date | string;
+  maxDate?: Date | string;
 }
 
 export function DatePicker({
@@ -155,7 +162,9 @@ export function DatePicker({
   placeholder = "Pick a date",
   className,
   id,
-  formatStr = "MMM dd, yyyy"
+  formatStr = "MMM dd, yyyy",
+  minDate,
+  maxDate
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -164,6 +173,20 @@ export function DatePicker({
     const parsed = parseISO(value);
     return isValid(parsed) ? parsed : undefined;
   }, [value]);
+
+  const parsedMinDate = React.useMemo(() => {
+    if (!minDate) return undefined;
+    if (minDate instanceof Date) return isValid(minDate) ? minDate : undefined;
+    const parsed = parseISO(minDate);
+    return isValid(parsed) ? parsed : undefined;
+  }, [minDate]);
+
+  const parsedMaxDate = React.useMemo(() => {
+    if (!maxDate) return undefined;
+    if (maxDate instanceof Date) return isValid(maxDate) ? maxDate : undefined;
+    const parsed = parseISO(maxDate);
+    return isValid(parsed) ? parsed : undefined;
+  }, [maxDate]);
 
   const handleSelect = (date: Date) => {
     const formatted = format(date, "yyyy-MM-dd");
@@ -195,7 +218,12 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 rounded-2xl shadow-xl" align="start">
-        <Calendar selected={selectedDate} onSelect={handleSelect} />
+        <Calendar
+          selected={selectedDate}
+          onSelect={handleSelect}
+          minDate={parsedMinDate}
+          maxDate={parsedMaxDate}
+        />
       </PopoverContent>
     </Popover>
   );

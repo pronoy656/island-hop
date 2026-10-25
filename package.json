@@ -18,7 +18,11 @@
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache && prettier --write .",
     "lint:ci": "eslint . --max-warnings=0 && prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit": "node scripts/audit-frontend.js",
+    "verify": "node scripts/audit-frontend.js",
+    "verify:routes": "node scripts/verify-operator-routes.js",
+    "verify:popular": "node scripts/verify-popular-routes.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
