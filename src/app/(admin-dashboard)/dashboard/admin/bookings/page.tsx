@@ -34,20 +34,13 @@ import {
   Button,
   Card,
   CardContent,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Tabs,
-  TabsList,
-  TabsTrigger
 } from "@/ui";
 import {
   BookingDetailsModal,
   DashboardTableCard,
   StatusBadge,
+  TablePagination,
+  TableToolbar,
   type TableColumn
 } from "@/widgets";
 
@@ -65,7 +58,7 @@ export default function AdminBookingsPage() {
 
   const [activeTab, setActiveTab] = React.useState<BookingStatusTab>("ALL");
   const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(20);
+  const [limit, setLimit] = React.useState(10);
   const [selectedBooking, setSelectedBooking] = React.useState<IAdminBookingItem | null>(null);
 
   // Reset to first page when search query or filter tab changes
@@ -83,7 +76,7 @@ export default function AdminBookingsPage() {
   const bookings = data?.data ?? [];
   const meta = data?.meta ?? {
     page: 1,
-    limit: 20,
+    limit: 10,
     total: 0,
     totalPages: 1
   };
@@ -354,83 +347,24 @@ export default function AdminBookingsPage() {
         </Card>
       </div>
 
-      {/* Tabs and Search Controls */}
-      <div className="space-y-4">
-        {/* Status Tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(val) => setActiveTab(val as BookingStatusTab)}
-          className="w-full"
-        >
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <TabsList className="h-10 p-1 bg-muted/80 max-w-full overflow-x-auto flex flex-nowrap">
-              <TabsTrigger value="ALL" className="px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap">
-                All Bookings
-              </TabsTrigger>
-              <TabsTrigger value="CONFIRMED" className="px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap">
-                Confirmed
-              </TabsTrigger>
-              <TabsTrigger value="CHECKED_IN" className="px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap">
-                Checked In
-              </TabsTrigger>
-              <TabsTrigger value="COMPLETED" className="px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap">
-                Completed
-              </TabsTrigger>
-              <TabsTrigger value="CANCELLED" className="px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap">
-                Cancelled
-              </TabsTrigger>
-              <TabsTrigger value="PENDING" className="px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap">
-                Pending
-              </TabsTrigger>
-            </TabsList>
+      {/* Reusable Search & Status Toolbar */}
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search reference, passenger, or email..."
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={[
+          { value: "ALL", label: "All Bookings", count: totalCount },
+          { value: "CONFIRMED", label: "Confirmed", count: confirmedCount },
+          { value: "CHECKED_IN", label: "Checked In", count: checkedInCount },
+          { value: "COMPLETED", label: "Completed" },
+          { value: "CANCELLED", label: "Cancelled", count: cancelledCount },
+          { value: "PENDING", label: "Pending", count: pendingCount }
+        ]}
+      />
 
-            {/* Search Input & Page Size Select */}
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <div className="relative flex-1 sm:w-80">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  type="text"
-                  placeholder="Search reference, passenger, or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-10 pl-9 pr-8 text-xs font-medium rounded-xl border-border/80 bg-background"
-                />
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              <div className="w-36 shrink-0">
-                <Select
-                  value={String(limit)}
-                  onValueChange={(val) => {
-                    setLimit(Number(val));
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-10 text-xs font-medium rounded-xl border-border/80 bg-background">
-                    <SelectValue placeholder="Page Size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </Tabs>
-
-        {/* Bookings Data Table Card */}
+      {/* Bookings Data Table Card */}
         {isError ? (
           <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-8 text-center space-y-4">
             <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
@@ -452,7 +386,7 @@ export default function AdminBookingsPage() {
         ) : (
           <div className="space-y-4">
             <DashboardTableCard
-              title={`Platform Bookings Manifest (${totalCount})`}
+              title="Platform Bookings Manifest"
               columns={bookingColumns}
               data={bookings}
               keyExtractor={(item) => item.id}
@@ -465,66 +399,20 @@ export default function AdminBookingsPage() {
               }
             />
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-2 py-2 text-xs">
-                <span className="text-muted-foreground font-medium">
-                  Showing <strong className="text-foreground">{(page - 1) * limit + 1}</strong> to{" "}
-                  <strong className="text-foreground">{Math.min(page * limit, totalCount)}</strong> of{" "}
-                  <strong className="text-foreground">{totalCount}</strong> bookings
-                </span>
-
-                <div className="flex items-center gap-1.5 self-center sm:self-auto">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                    className="h-8 w-8 p-0"
-                    title="Previous Page"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
-                      let pageNumber = idx + 1;
-                      if (totalPages > 5 && page > 3) {
-                        pageNumber = page - 3 + idx;
-                        if (pageNumber > totalPages) pageNumber = totalPages - (4 - idx);
-                      }
-                      return (
-                        <Button
-                          key={pageNumber}
-                          variant={page === pageNumber ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setPage(pageNumber)}
-                          className={`h-8 w-8 p-0 font-bold text-xs ${
-                            page === pageNumber ? "bg-blue-600 text-white" : ""
-                          }`}
-                        >
-                          {pageNumber}
-                        </Button>
-                      );
-                    })}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                    className="h-8 w-8 p-0"
-                    title="Next Page"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            {/* Reusable Pagination Controls */}
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={limit}
+              onPageChange={setPage}
+              onPageSizeChange={setLimit}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              itemName="bookings"
+              isLoading={isFetching}
+            />
           </div>
         )}
-      </div>
 
       {/* Booking Details Modal */}
       <BookingDetailsModal

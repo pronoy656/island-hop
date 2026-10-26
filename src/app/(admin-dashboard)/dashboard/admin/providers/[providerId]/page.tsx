@@ -1,5 +1,4 @@
-import type { Metadata } from "next";
-import { ProviderDetailsView } from "@/widgets";
+import { redirect } from "next/navigation";
 
 interface ProviderDetailPageProps {
   params: Promise<{
@@ -7,19 +6,9 @@ interface ProviderDetailPageProps {
   }>;
 }
 
-export async function generateMetadata({
-  params
-}: ProviderDetailPageProps): Promise<Metadata> {
-  const { providerId } = await params;
-  return {
-    title: `Operator Details (${providerId}) | FerryGo Admin`,
-    description: "Manage operator fleet, route schedules, revenue splits, and account status."
-  };
-}
-
-export default async function ProviderDetailPage({
+export default async function ProviderDetailRedirectPage({
   params
 }: ProviderDetailPageProps) {
   const { providerId } = await params;
-  return <ProviderDetailsView providerId={providerId} />;
+  redirect(`/dashboard/admin/operators/${providerId}`);
 }

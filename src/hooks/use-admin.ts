@@ -180,7 +180,7 @@ export function useAdminBookingsQuery(params?: IAdminBookingFilterParams) {
         response.data ?? {
           meta: {
             page: params?.page ?? 1,
-            limit: params?.limit ?? 20,
+            limit: params?.limit ?? 10,
             total: 0,
             totalPages: 1
           },

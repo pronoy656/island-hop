@@ -34,12 +34,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   },
   {
     name: "Passengers",
-    href: "/dashboard/admin/users",
+    href: "/dashboard/admin/passengers",
     icon: Users
   },
   {
     name: "Operators",
-    href: "/dashboard/admin/providers",
+    href: "/dashboard/admin/operators",
     icon: Building2
   },
   {
@@ -83,8 +83,18 @@ export function AdminSidebar({ onItemClick, className }: AdminSidebarProps) {
     }
     if (item.name === "Passengers" || item.name === "Users") {
       return (
+        pathname.startsWith("/dashboard/admin/passengers") ||
+        pathname.startsWith("/admin/passengers") ||
         pathname.startsWith("/dashboard/admin/users") ||
         pathname.startsWith("/admin/users")
+      );
+    }
+    if (item.name === "Operators" || item.name === "Providers") {
+      return (
+        pathname.startsWith("/dashboard/admin/operators") ||
+        pathname.startsWith("/admin/operators") ||
+        pathname.startsWith("/dashboard/admin/providers") ||
+        pathname.startsWith("/admin/providers")
       );
     }
     if (item.name === "Ports") {

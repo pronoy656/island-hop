@@ -6,7 +6,6 @@ import {
   AlertCircle,
   DollarSign,
   MapPin,
-  RefreshCw,
   Ship,
   Ticket,
   TrendingDown,
@@ -27,8 +26,7 @@ export default function OperatorOverviewPage() {
     isLoading,
     isError,
     error,
-    refetch,
-    isFetching
+    refetch
   } = useOperatorOverviewQuery();
 
   const kpis = overviewData?.kpis;
@@ -212,35 +210,14 @@ export default function OperatorOverviewPage() {
 
   return (
     <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      {/* Provider Hero / Welcome Banner */}
-      <div className="border-border/80 rounded-2xl border bg-gradient-to-r from-emerald-600/15 via-teal-600/10 to-transparent p-6 shadow-xs sm:p-7">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-foreground text-2xl font-extrabold tracking-tight sm:text-3xl">
-                Welcome back, {user?.name || "Operator Partner"}
-              </h1>
-            </div>
-            <p className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
-              <MapPin className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Operations Hub</span>
-              <span className="text-muted-foreground/60">•</span>
-              <span className="font-mono text-xs">{user?.email || "Active Verified Provider"}</span>
-            </p>
-          </div>
-          <div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void refetch()}
-              disabled={isFetching}
-              className="gap-2 border-border/80 shadow-xs"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-emerald-600" : ""}`} />
-              <span>{isFetching ? "Syncing..." : "Sync Live Data"}</span>
-            </Button>
-          </div>
-        </div>
+      {/* Modern, Clean & Professional Header */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          Operator Overview
+        </h1>
+        <p className="text-muted-foreground text-xs sm:text-sm">
+          Welcome back, <strong className="font-semibold text-foreground">{user?.name || "Operator Partner"}</strong>
+        </p>
       </div>
 
       {/* Error Banner */}

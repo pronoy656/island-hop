@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   AlertTriangle,
   Anchor,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 
 import {
   useAdminPortsQuery,
@@ -30,6 +32,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -43,7 +46,7 @@ import {
   TabsList,
   TabsTrigger
 } from "@/ui";
-import { DashboardTableCard, StatusBadge, type TableColumn } from "@/widgets";
+import { DashboardTableCard, StatusBadge, TablePagination, TableToolbar, type TableColumn } from "@/widgets";
 
 const STATUS_SELECT_OPTIONS = [
   { value: "ACTIVE", label: "Active (Operational)" },
@@ -51,7 +54,6 @@ const STATUS_SELECT_OPTIONS = [
 ];
 
 const PAGE_SIZE_OPTIONS = [
-  { value: "5", label: "5 per page" },
   { value: "10", label: "10 per page" },
   { value: "20", label: "20 per page" },
   { value: "50", label: "50 per page" }
@@ -60,11 +62,22 @@ const PAGE_SIZE_OPTIONS = [
 export function PortManagementView() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const debouncedSearch = useDebounce(searchTerm, 250);
-  const [activeTab, setActiveTab] = React.useState<"all" | "active" | "inactive">("all");
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(["all", "active", "inactive"] as const).withDefault("all")
+  );
 
-  // Pagination states
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
+  // Pagination states synced to URL query (?page=2&pageSize=10)
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [pageSize, setPageSize] = useQueryState("pageSize", parseAsInteger.withDefault(10));
+
+  // Bulk selection & action states
+  const [selectedPortIds, setSelectedPortIds] = React.useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = React.useState(false);
+  const [bulkActionType, setBulkActionType] = React.useState<
+    "activate" | "deactivate" | "delete" | null
+  >(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = React.useState(false);
 
   // Dialog States
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -77,7 +90,7 @@ export function PortManagementView() {
   const [errorText, setErrorText] = React.useState("");
 
   // Data Fetching
-  const { data, isLoading, refetch } = useAdminPortsQuery({ limit: 100 });
+  const { data, isLoading, refetch, isFetching } = useAdminPortsQuery({ limit: 100 });
   const createMutation = useCreatePortMutation();
   const updateMutation = useUpdatePortMutation();
   const deleteMutation = useDeletePortMutation();
@@ -105,22 +118,28 @@ export function PortManagementView() {
     });
   }, [ports, activeTab, debouncedSearch]);
 
-  // Reset page whenever search, filter, or page size changes
+  // Reset page & selection whenever search, filter, or page size changes (skip on mount to preserve URL page)
+  const isFirstMount = React.useRef(true);
   React.useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, activeTab, pageSize]);
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    void setPage(1);
+    setSelectedPortIds(new Set());
+  }, [debouncedSearch, activeTab, pageSize, setPage]);
 
   // Pagination calculations
   const totalFiltered = filteredPorts.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
   const currentPage = Math.min(Math.max(page, 1), totalPages);
 
-  // Keep page clamped if items are deleted or filter changes
+  // Keep page clamped if items are deleted or filter changes (guarded: wait until data finishes loading)
   React.useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
+    if (!isLoading && !isFetching && data && page > totalPages && totalPages > 0) {
+      void setPage(totalPages);
     }
-  }, [page, totalPages]);
+  }, [page, totalPages, isLoading, isFetching, data, setPage]);
 
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalFiltered);
@@ -128,18 +147,167 @@ export function PortManagementView() {
     return filteredPorts.slice(startIndex, endIndex);
   }, [filteredPorts, startIndex, endIndex]);
 
-  const pageNumbers = React.useMemo(() => {
-    if (totalPages <= 5) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+  // Selection Computations
+  const displayedPortIds = React.useMemo(
+    () => paginatedPorts.map((p) => p.id),
+    [paginatedPorts]
+  );
+  const isAllCurrentPageSelected =
+    paginatedPorts.length > 0 && paginatedPorts.every((p) => selectedPortIds.has(p.id));
+  const isSomeCurrentPageSelected =
+    paginatedPorts.some((p) => selectedPortIds.has(p.id)) && !isAllCurrentPageSelected;
+  const selectedCount = selectedPortIds.size;
+
+  const toggleSelectAllCurrentPage = () => {
+    setSelectedPortIds((prev) => {
+      const next = new Set(prev);
+      if (isAllCurrentPageSelected) {
+        displayedPortIds.forEach((id) => next.delete(id));
+      } else {
+        displayedPortIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllAcrossPages = () => {
+    const allIds = filteredPorts.map((p) => p.id);
+    setSelectedPortIds(new Set(allIds));
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedPortIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedPortIds(new Set());
+  };
+
+  // Bulk Handlers
+  const handleBulkActivate = async () => {
+    if (selectedPortIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedPortIds);
+    setIsBulkOperating(true);
+    setBulkActionType("activate");
+
+    const toastId = toast.loading(
+      `Activating ${ids.length} ${ids.length === 1 ? "port" : "ports"}...`
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      const targetPort = ports.find((p) => p.id === id);
+      try {
+        await updateMutation.mutateAsync({
+          id,
+          payload: {
+            name: targetPort?.name ?? "",
+            isActive: true
+          }
+        });
+        successCount++;
+      } catch {
+        failCount++;
+      }
     }
-    if (currentPage <= 3) {
-      return [1, 2, 3, 4, "...", totalPages];
+
+    await refetch();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setSelectedPortIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully activated all ${successCount} ports!`, { id: toastId });
+    } else {
+      toast.warning(`Activated ${successCount} ports (${failCount} failed)`, { id: toastId });
     }
-    if (currentPage >= totalPages - 2) {
-      return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedPortIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedPortIds);
+    setIsBulkOperating(true);
+    setBulkActionType("deactivate");
+
+    const toastId = toast.loading(
+      `Deactivating ${ids.length} ${ids.length === 1 ? "port" : "ports"}...`
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      const targetPort = ports.find((p) => p.id === id);
+      try {
+        await updateMutation.mutateAsync({
+          id,
+          payload: {
+            name: targetPort?.name ?? "",
+            isActive: false
+          }
+        });
+        successCount++;
+      } catch {
+        failCount++;
+      }
     }
-    return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
-  }, [currentPage, totalPages]);
+
+    await refetch();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setSelectedPortIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully deactivated all ${successCount} ports!`, { id: toastId });
+    } else {
+      toast.warning(`Deactivated ${successCount} ports (${failCount} failed)`, { id: toastId });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedPortIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedPortIds);
+    setIsBulkOperating(true);
+    setBulkActionType("delete");
+
+    const toastId = toast.loading(
+      `Deleting ${ids.length} ${ids.length === 1 ? "port" : "ports"}...`
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      try {
+        await deleteMutation.mutateAsync(id);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    await refetch();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setIsBulkDeleteModalOpen(false);
+    setSelectedPortIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully deleted ${successCount} ports!`, { id: toastId });
+    } else {
+      toast.warning(`Deleted ${successCount} ports (${failCount} failed)`, { id: toastId });
+    }
+  };
 
   // Open Modal for Create
   const handleOpenAdd = () => {
@@ -205,6 +373,41 @@ export function PortManagementView() {
   // Table Columns
   const columns: TableColumn<IPort>[] = [
     {
+      header: (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              isAllCurrentPageSelected
+                ? true
+                : isSomeCurrentPageSelected
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={toggleSelectAllCurrentPage}
+            aria-label="Select all ports on current page"
+          />
+        </div>
+      ),
+      headerClassName: "w-10 px-3 text-center",
+      className: "w-10 px-3 text-center",
+      align: "center",
+      cell: (item) => {
+        const isChecked = selectedPortIds.has(item.id);
+        return (
+          <div
+            className="flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => toggleSelectRow(item.id)}
+              aria-label={`Select port ${item.name}`}
+            />
+          </div>
+        );
+      }
+    },
+    {
       header: "PORT NAME",
       cell: (item) => (
         <div className="flex items-center gap-2.5">
@@ -217,7 +420,6 @@ export function PortManagementView() {
         </div>
       )
     },
-
     {
       header: "STATUS",
       cell: (item) => (
@@ -269,104 +471,71 @@ export function PortManagementView() {
         <Button
           size="sm"
           onClick={handleOpenAdd}
-          className="h-9 text-xs flex items-center gap-1.5 bg-blue-600 text-white hover:bg-blue-700 shadow-xs font-semibold self-start sm:self-auto"
+          className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 self-start sm:self-auto h-9 text-xs font-semibold px-3.5 shadow-xs"
         >
           <Plus className="h-4 w-4" />
           <span>Add Port</span>
         </Button>
       </div>
 
-      {/* Metric Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="border-border/80 bg-card shadow-xs">
-          <CardContent className="p-5 flex items-center justify-between">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <Card className="border-border/80 shadow-xs">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase">Total Ports</p>
-              <p className="text-2xl font-extrabold text-foreground mt-1">
-                {totalCount} {totalCount === 1 ? "Port" : "Ports"}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Master harbor & terminal hubs</p>
+              <p className="text-xs text-muted-foreground font-medium">Total Terminals</p>
+              <p className="text-2xl font-extrabold text-foreground mt-0.5">{totalCount}</p>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
               <Anchor className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 bg-card shadow-xs">
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="border-border/80 shadow-xs">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase">Operational</p>
-              <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                {activeCount} Active
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                {inactiveCount > 0 ? `${inactiveCount} currently closed` : "All ports open for docking"}
+              <p className="text-xs text-muted-foreground font-medium">Operational (Active)</p>
+              <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {activeCount}
               </p>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 bg-card shadow-xs">
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="border-border/80 shadow-xs">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase">Inactive Ports</p>
-              <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
-                {inactiveCount} {inactiveCount === 1 ? "Port" : "Ports"}
+              <p className="text-xs text-muted-foreground font-medium">Suspended (Closed)</p>
+              <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
+                {inactiveCount}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Suspended or inactive</p>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
               <AlertTriangle className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Clean Search & Status Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border/80 shadow-xs">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search ports by name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 pr-9 h-9 text-xs bg-background"
-          />
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+      {/* Reusable Search & Status Toolbar */}
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search ports by name..."
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={[
+          { value: "all", label: "All", count: totalCount },
+          { value: "active", label: "Active", count: activeCount },
+          { value: "inactive", label: "Inactive", count: inactiveCount }
+        ]}
+      />
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(val) => setActiveTab(val as "all" | "active" | "inactive")}
-          className="w-auto"
-        >
-          <TabsList className="h-9">
-            <TabsTrigger value="all" className="text-xs">
-              All ({totalCount})
-            </TabsTrigger>
-            <TabsTrigger value="active" className="text-xs">
-              Active ({activeCount})
-            </TabsTrigger>
-            <TabsTrigger value="inactive" className="text-xs">
-              Inactive ({inactiveCount})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Table */}
+      {/* Table & Bulk Actions */}
       {isLoading ? (
         <div className="space-y-3 rounded-xl border border-border/80 bg-card p-6 shadow-xs animate-pulse">
           <div className="h-5 w-40 rounded bg-muted mb-4" />
@@ -376,15 +545,126 @@ export function PortManagementView() {
         </div>
       ) : (
         <div className="space-y-3">
+          {/* Bulk Action Sticky / Floating Toolbar */}
+          {selectedCount > 0 && (
+            <div className="bg-card/95 dark:bg-card/90 border-blue-500/30 sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 shadow-lg backdrop-blur-md transition-all animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 text-xs font-bold text-white shadow-2xs">
+                  {selectedCount}
+                </span>
+                <span className="text-foreground text-xs font-semibold">
+                  {selectedCount === 1 ? "port selected" : "ports selected"}
+                </span>
+
+                {paginatedPorts.length > 0 &&
+                  isAllCurrentPageSelected &&
+                  totalFiltered > paginatedPorts.length &&
+                  selectedCount < totalFiltered && (
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllAcrossPages}
+                      className="ml-2 cursor-pointer text-xs font-semibold text-blue-600 underline-offset-4 hover:underline dark:text-blue-400"
+                    >
+                      Select all {totalFiltered} ports across all pages
+                    </button>
+                  )}
+              </div>
+
+              {/* Bulk Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={handleBulkActivate}
+                  className="h-8 cursor-pointer gap-1.5 border-emerald-200 bg-emerald-50/50 text-xs font-semibold text-emerald-700 shadow-2xs hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+                  title="Activate selected ports"
+                >
+                  {isBulkOperating && bulkActionType === "activate" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                  )}
+                  <span>Activate</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={handleBulkDeactivate}
+                  className="h-8 cursor-pointer gap-1.5 border-amber-200 bg-amber-50/50 text-xs font-semibold text-amber-700 shadow-2xs hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                  title="Deactivate / Suspend selected ports"
+                >
+                  {isBulkOperating && bulkActionType === "deactivate" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
+                  <span>Suspend</span>
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => setIsBulkDeleteModalOpen(true)}
+                  className="h-8 cursor-pointer gap-1.5 bg-rose-600 text-xs font-semibold text-white shadow-2xs hover:bg-rose-700"
+                  title="Delete selected ports"
+                >
+                  {isBulkOperating && bulkActionType === "delete" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>Delete ({selectedCount})</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={clearSelection}
+                  className="h-8 cursor-pointer gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  title="Deselect all ports"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Deselect</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
           <DashboardTableCard
             title={
               searchTerm || activeTab !== "all"
-                ? `Filtered Ports (${totalFiltered})`
-                : `All Ports (${totalCount})`
+                ? "Filtered Ports"
+                : "All Ports"
+            }
+            headerRight={
+              selectedCount > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-medium">
+                    {selectedCount} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="cursor-pointer text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : undefined
             }
             columns={columns}
             data={paginatedPorts}
             keyExtractor={(item) => item.id}
+            rowClassName={(item) =>
+              selectedPortIds.has(item.id)
+                ? "bg-blue-500/10 hover:bg-blue-500/15 dark:bg-blue-950/30 dark:hover:bg-blue-950/40 border-l-2 border-l-blue-600 dark:border-l-blue-400"
+                : undefined
+            }
             emptyMessage={
               searchTerm || activeTab !== "all"
                 ? "No ports found matching your search."
@@ -392,82 +672,21 @@ export function PortManagementView() {
             }
           />
 
-          {/* Pagination Controls */}
-          {totalFiltered > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 bg-card p-3 sm:px-4 rounded-xl border border-border/80 shadow-xs">
-              {/* Left: Showing entries info & Page size selector */}
-              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
-                <span>
-                  Showing <span className="font-semibold text-foreground">{startIndex + 1}</span> to{" "}
-                  <span className="font-semibold text-foreground">{endIndex}</span> of{" "}
-                  <span className="font-semibold text-foreground">{totalFiltered}</span> ports
-                </span>
-
-                <div className="flex items-center gap-1.5 pl-0 sm:pl-3 sm:border-l sm:border-border/60">
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">Show:</span>
-                  <ReusableSelect
-                    value={String(pageSize)}
-                    onValueChange={(val) => setPageSize(Number(val))}
-                    options={PAGE_SIZE_OPTIONS}
-                    className="h-8 text-xs w-[115px]"
-                  />
-                </div>
-              </div>
-
-              {/* Right: Page Navigation Buttons */}
-              <div className="flex items-center gap-1.5 self-center sm:self-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage <= 1}
-                  className="h-8 px-2.5 text-xs flex items-center gap-1 font-medium"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {pageNumbers.map((p, idx) =>
-                    typeof p === "number" ? (
-                      <Button
-                        key={p}
-                        variant={currentPage === p ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPage(p)}
-                        className={cn(
-                          "h-8 min-w-8 px-2 text-xs font-semibold",
-                          currentPage === p
-                            ? "bg-blue-600 text-white hover:bg-blue-700 shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {p}
-                      </Button>
-                    ) : (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        className="px-1 text-xs font-bold text-muted-foreground select-none"
-                      >
-                        ...
-                      </span>
-                    )
-                  )}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="h-8 px-2.5 text-xs flex items-center gap-1 font-medium"
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Reusable Pagination Controls */}
+          <TablePagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={totalFiltered}
+            pageSize={pageSize}
+            onPageChange={(newPage) => void setPage(newPage)}
+            onPageSizeChange={(newSize) => {
+              void setPageSize(newSize);
+              void setPage(1);
+            }}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            itemName="ports"
+            isLoading={isFetching}
+          />
         </div>
       )}
 
@@ -475,17 +694,18 @@ export function PortManagementView() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingPort ? "Edit Port" : "Add New Port"}
+            <DialogTitle className="text-base text-foreground flex items-center gap-2">
+              <Compass className="h-4 w-4 text-blue-600" />
+              <span>{editingPort ? "Edit Port" : "Add New Port"}</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               {editingPort
-                ? "Update port details and operational status."
-                : "Register a new port or ferry terminal."}
+                ? "Update port title and operational state."
+                : "Register a new terminal or harbor destination into the network."}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-3.5 py-2">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label htmlFor="port-name" className="text-xs font-semibold">
                 Port Name <span className="text-rose-500">*</span>
@@ -539,7 +759,7 @@ export function PortManagementView() {
         </DialogContent>
       </Dialog>
 
-      {/* ─── DELETE CONFIRMATION DIALOG ────────────────────────────────────── */}
+      {/* ─── SINGLE DELETE CONFIRMATION DIALOG ─────────────────────────────── */}
       <Dialog open={!!deletingPort} onOpenChange={(open) => !open && setDeletingPort(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -588,6 +808,58 @@ export function PortManagementView() {
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               )}
               <span>Delete</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── BULK DELETE CONFIRMATION MODAL ───────────────────────────────── */}
+      <Dialog
+        open={isBulkDeleteModalOpen}
+        onOpenChange={(open) => !open && !isBulkOperating && setIsBulkDeleteModalOpen(false)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-foreground text-base font-bold">
+                  Delete {selectedCount} {selectedCount === 1 ? "Port" : "Ports"}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Are you sure you want to permanently delete {selectedCount} selected ports? This may affect routes that originate or terminate at these ports.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={handleBulkDelete}
+              className="bg-rose-600 text-xs font-semibold text-white hover:bg-rose-700"
+            >
+              {isBulkOperating ? (
+                <>
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  Deleting {selectedCount} Ports...
+                </>
+              ) : (
+                `Delete ${selectedCount} ${selectedCount === 1 ? "Port" : "Ports"}`
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

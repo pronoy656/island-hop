@@ -26,9 +26,19 @@ export function AdminHeader({
     ) {
       return "Overview";
     }
-    if (pathname.startsWith("/dashboard/admin/users") || pathname.startsWith("/admin/users"))
+    if (
+      pathname.startsWith("/dashboard/admin/passengers") ||
+      pathname.startsWith("/admin/passengers") ||
+      pathname.startsWith("/dashboard/admin/users") ||
+      pathname.startsWith("/admin/users")
+    )
       return "Passengers";
-    if (pathname.startsWith("/dashboard/admin/providers") || pathname.startsWith("/admin/providers"))
+    if (
+      pathname.startsWith("/dashboard/admin/operators") ||
+      pathname.startsWith("/admin/operators") ||
+      pathname.startsWith("/dashboard/admin/providers") ||
+      pathname.startsWith("/admin/providers")
+    )
       return "Operators Management";
     if (pathname.startsWith("/dashboard/admin/ports") || pathname.startsWith("/admin/ports"))
       return "Ports Management";

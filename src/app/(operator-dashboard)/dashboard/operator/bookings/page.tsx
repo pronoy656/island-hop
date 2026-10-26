@@ -2,25 +2,27 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  Search
-} from "lucide-react";
 import { toast } from "sonner";
 import { PROVIDER_MOCK_DATA, type ProviderBookingItem } from "@/data";
 import {
-  Button,
-  Input,
-  Tabs,
-  TabsList,
-  TabsTrigger
-} from "@/ui";
-import { DashboardTableCard, StatusBadge, type TableColumn } from "@/widgets";
+  DashboardTableCard,
+  StatusBadge,
+  TablePagination,
+  TableToolbar,
+  type TableColumn,
+  type TableToolbarTab
+} from "@/widgets";
 
 export default function OperatorBookingsPage() {
   const [bookings, setBookings] = React.useState<ProviderBookingItem[]>(PROVIDER_MOCK_DATA.bookings);
   const [activeTab, setActiveTab] = React.useState("all");
   const [searchTerm, setSearchTerm] = React.useState("");
 
+  // Pagination states (default 10)
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
+
+  // Filter bookings based on active tab and search query
   const filteredBookings = React.useMemo(() => {
     return bookings.filter((b) => {
       const matchesTab =
@@ -37,6 +39,44 @@ export default function OperatorBookingsPage() {
       return matchesTab && matchesSearch;
     });
   }, [bookings, activeTab, searchTerm]);
+
+  // Reset page when search or filter tab or pageSize changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [searchTerm, activeTab, pageSize]);
+
+  // Pagination calculations
+  const totalCount = filteredBookings.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const currentPage = Math.min(Math.max(page, 1), totalPages);
+
+  const paginatedBookings = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredBookings.slice(startIndex, startIndex + pageSize);
+  }, [filteredBookings, currentPage, pageSize]);
+
+  // Tab configurations with counts
+  const filterTabs: TableToolbarTab<string>[] = React.useMemo(
+    () => [
+      { value: "all", label: "All Bookings", count: bookings.length },
+      {
+        value: "confirmed",
+        label: "Confirmed",
+        count: bookings.filter((b) => b.status === "Confirmed").length
+      },
+      {
+        value: "checked-in",
+        label: "Checked In",
+        count: bookings.filter((b) => b.status === "Checked In").length
+      },
+      {
+        value: "cancelled",
+        label: "Cancelled",
+        count: bookings.filter((b) => b.status === "Cancelled").length
+      }
+    ],
+    [bookings]
+  );
 
   const handleCheckIn = (item: ProviderBookingItem) => {
     setBookings((prev) =>
@@ -129,40 +169,38 @@ export default function OperatorBookingsPage() {
         </p>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-          <TabsList className="bg-muted/70 max-w-md h-9 p-1 rounded-lg">
-            <TabsTrigger value="all" className="text-xs font-semibold">
-              All Bookings ({bookings.length})
-            </TabsTrigger>
-            <TabsTrigger value="confirmed" className="text-xs font-semibold">
-              Confirmed
-            </TabsTrigger>
-            <TabsTrigger value="checked-in" className="text-xs font-semibold">
-              Checked In
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search passenger, reference..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8 text-xs h-9 bg-card"
-          />
-        </div>
-      </div>
-
-      {/* Bookings Table */}
-      <DashboardTableCard
-        title="Reservations & Tickets"
-        columns={bookingColumns}
-        data={filteredBookings}
-        keyExtractor={(item) => item.id}
+      {/* Reusable Toolbar: Search Bar on left + Filter Tabs on right */}
+      <TableToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search passenger, reference, route..."
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={filterTabs}
       />
+
+      {/* Bookings Table & Reusable Pagination */}
+      <div className="space-y-4">
+        <DashboardTableCard
+          title="Reservations & Tickets"
+          columns={bookingColumns}
+          data={paginatedBookings}
+          keyExtractor={(item) => item.id}
+        />
+
+        <TablePagination
+          page={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
+          itemName="bookings"
+        />
+      </div>
     </div>
   );
 }

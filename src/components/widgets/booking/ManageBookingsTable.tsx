@@ -102,7 +102,7 @@ export function ManageBookingsTable() {
   }, [bookings, params.status, params.search]);
 
   // Pagination calculation
-  const pageSize = 5;
+  const pageSize = 10;
   const totalPages = Math.ceil(filteredBookings.length / pageSize) || 1;
   const currentPage = Math.min(Math.max(params.page, 1), totalPages);
 

@@ -48,6 +48,7 @@ import {
 import {
   Button,
   Card,
+  Checkbox,
   CardContent,
   Dialog,
   DialogContent,
@@ -63,7 +64,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@/ui";
-import { DashboardTableCard, StatusBadge, type TableColumn, VesselImageUploader } from "@/widgets";
+import { DashboardTableCard, StatusBadge, TablePagination, type TableColumn, VesselImageUploader } from "@/widgets";
 import { DEFAULT_FERRY_IMAGES, getDynamicVesselImage } from "@/data/media-catalog";
 export { DEFAULT_FERRY_IMAGES, getDynamicVesselImage };
 
@@ -190,7 +191,6 @@ const FILTER_STATUS_OPTIONS = [
 ];
 
 const PAGE_SIZE_OPTIONS = [
-  { value: "5", label: "5 per page" },
   { value: "10", label: "10 per page" },
   { value: "20", label: "20 per page" },
   { value: "50", label: "50 per page" }
@@ -233,9 +233,23 @@ export default function OperatorFerriesPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
 
-  // Reset page whenever search, filter, or page size changes
+  // Bulk selection & action states
+  const [selectedFerryIds, setSelectedFerryIds] = React.useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = React.useState(false);
+  const [bulkActionType, setBulkActionType] = React.useState<
+    "in_service" | "maintenance" | "out_of_service" | "delete" | null
+  >(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = React.useState(false);
+
+  // Reset page whenever search, filter, or page size changes (guard initial mount)
+  const isFirstMount = React.useRef(true);
   React.useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     setPage(1);
+    setSelectedFerryIds(new Set());
   }, [debouncedSearch, selectedType, selectedStatus, pageSize]);
 
   // Modal states
@@ -290,21 +304,6 @@ export default function OperatorFerriesPage() {
     }
   }, [page, totalPages]);
 
-  const startIndex = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endIndex = Math.min(currentPage * pageSize, totalCount);
-
-  const pageNumbers = React.useMemo(() => {
-    if (totalPages <= 5) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    if (currentPage <= 3) {
-      return [1, 2, 3, 4, "...", totalPages];
-    }
-    if (currentPage >= totalPages - 2) {
-      return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-    }
-    return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
-  }, [currentPage, totalPages]);
 
   // Form states
   const [newFerry, setNewFerry] = React.useState<ICreateFerryPayload>({
@@ -528,7 +527,172 @@ export default function OperatorFerriesPage() {
   const totalCapacity =
     statsData?.totalCapacity ?? ferries.reduce((acc, f) => acc + (f.capacity || 0), 0);
 
+  // Selection Computations
+  const displayedFerryIds = React.useMemo(() => ferries.map((f) => f.id), [ferries]);
+  const isAllCurrentPageSelected =
+    ferries.length > 0 && ferries.every((f) => selectedFerryIds.has(f.id));
+  const isSomeCurrentPageSelected =
+    ferries.some((f) => selectedFerryIds.has(f.id)) && !isAllCurrentPageSelected;
+  const selectedCount = selectedFerryIds.size;
+
+  const toggleSelectAllCurrentPage = () => {
+    setSelectedFerryIds((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (isAllCurrentPageSelected) {
+        displayedFerryIds.forEach((id) => next.delete(id));
+      } else {
+        displayedFerryIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedFerryIds((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedFerryIds(new Set());
+  };
+
+  // Bulk Handlers
+  const handleBulkSetStatus = async (status: VesselStatus) => {
+    if (selectedFerryIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedFerryIds) as string[];
+    setIsBulkOperating(true);
+    const actionKey =
+      status === "IN_SERVICE"
+        ? "in_service"
+        : status === "MAINTENANCE"
+          ? "maintenance"
+          : "out_of_service";
+    setBulkActionType(actionKey);
+
+    const statusLabel =
+      status === "IN_SERVICE"
+        ? "In Service"
+        : status === "MAINTENANCE"
+          ? "Maintenance"
+          : "Out of Service";
+
+    const toastId = toast.loading(
+      `Setting ${ids.length} ${ids.length === 1 ? "ferry" : "ferries"} to ${statusLabel}...`
+    );
+
+    setLocalFerries((prev) =>
+      prev.map((f) => (selectedFerryIds.has(f.id) ? { ...f, status } : f))
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      try {
+        await updateMutation.mutateAsync({
+          id,
+          payload: { status }
+        });
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    await refetch();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setSelectedFerryIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully updated ${successCount} ferries to ${statusLabel}!`, {
+        id: toastId
+      });
+    } else {
+      toast.warning(`Updated ${successCount} ferries (${failCount} failed)`, { id: toastId });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedFerryIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedFerryIds) as string[];
+    setIsBulkOperating(true);
+    setBulkActionType("delete");
+
+    const toastId = toast.loading(
+      `Deleting ${ids.length} ${ids.length === 1 ? "ferry" : "ferries"}...`
+    );
+
+    setLocalFerries((prev) => prev.filter((f) => !selectedFerryIds.has(f.id)));
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      try {
+        await deleteMutation.mutateAsync(id);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    await refetch();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setIsBulkDeleteModalOpen(false);
+    setSelectedFerryIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully deleted ${successCount} ferries!`, { id: toastId });
+    } else {
+      toast.warning(`Deleted ${successCount} ferries (${failCount} failed)`, { id: toastId });
+    }
+  };
+
   const ferryColumns: TableColumn<IFerry>[] = [
+    {
+      header: (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              isAllCurrentPageSelected
+                ? true
+                : isSomeCurrentPageSelected
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={toggleSelectAllCurrentPage}
+            aria-label="Select all ferries on current page"
+          />
+        </div>
+      ),
+      headerClassName: "w-10 px-3 text-center",
+      className: "w-10 px-3 text-center",
+      align: "center",
+      cell: (item) => {
+        const isChecked = selectedFerryIds.has(item.id);
+        return (
+          <div
+            className="flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => toggleSelectRow(item.id)}
+              aria-label={`Select ferry ${item.name}`}
+            />
+          </div>
+        );
+      }
+    },
     {
       header: "FERRY VESSEL",
       cell: (item) => {
@@ -868,90 +1032,142 @@ export default function OperatorFerriesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <DashboardTableCard
-            title="All Ferries"
-            columns={ferryColumns}
-            data={ferries}
-            keyExtractor={(item) => item.id}
-          />
-
-          {/* Pagination Controls */}
-          {totalCount > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 bg-card p-3 sm:px-4 rounded-xl border border-border/80 shadow-xs">
-              {/* Left: Showing entries info & Page size selector */}
-              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
-                <span>
-                  Showing <span className="font-semibold text-foreground">{startIndex}</span> to{" "}
-                  <span className="font-semibold text-foreground">{endIndex}</span> of{" "}
-                  <span className="font-semibold text-foreground">{totalCount}</span> ferries
+          {/* Bulk Action Sticky / Floating Toolbar */}
+          {selectedCount > 0 && (
+            <div className="bg-card/95 dark:bg-card/90 border-emerald-500/30 sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 shadow-lg backdrop-blur-md transition-all animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-2 text-xs font-bold text-white shadow-2xs">
+                  {selectedCount}
                 </span>
-
-                <div className="flex items-center gap-1.5 pl-0 sm:pl-3 sm:border-l sm:border-border/60">
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">Show:</span>
-                  <ReusableSelect
-                    value={String(pageSize)}
-                    onValueChange={(val) => setPageSize(Number(val))}
-                    options={PAGE_SIZE_OPTIONS}
-                    className="h-8 text-xs w-[115px]"
-                  />
-                </div>
+                <span className="text-foreground text-xs font-semibold">
+                  {selectedCount === 1 ? "ferry selected" : "ferries selected"}
+                </span>
               </div>
 
-              {/* Right: Page Navigation Buttons */}
-              <div className="flex items-center gap-1.5 self-center sm:self-auto">
+              {/* Bulk Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage <= 1 || isFetching}
-                  className="h-8 px-2.5 text-xs flex items-center gap-1 font-medium"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("IN_SERVICE")}
+                  className="h-8 cursor-pointer gap-1.5 border-emerald-200 bg-emerald-50/50 text-xs font-semibold text-emerald-700 shadow-2xs hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+                  title="Mark selected ferries as In Service"
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Previous</span>
+                  {isBulkOperating && bulkActionType === "in_service" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                  )}
+                  <span>In Service</span>
                 </Button>
 
-                <div className="flex items-center gap-1">
-                  {pageNumbers.map((p, idx) =>
-                    typeof p === "number" ? (
-                      <Button
-                        key={p}
-                        variant={currentPage === p ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPage(p)}
-                        disabled={isFetching}
-                        className={cn(
-                          "h-8 min-w-8 px-2 text-xs font-semibold",
-                          currentPage === p
-                            ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {p}
-                      </Button>
-                    ) : (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        className="px-1 text-xs font-bold text-muted-foreground select-none"
-                      >
-                        ...
-                      </span>
-                    )
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("MAINTENANCE")}
+                  className="h-8 cursor-pointer gap-1.5 border-amber-200 bg-amber-50/50 text-xs font-semibold text-amber-700 shadow-2xs hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                  title="Mark selected ferries for Maintenance"
+                >
+                  {isBulkOperating && bulkActionType === "maintenance" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Wrench className="h-3.5 w-3.5" />
                   )}
-                </div>
+                  <span>Maintenance</span>
+                </Button>
 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage >= totalPages || isFetching}
-                  className="h-8 px-2.5 text-xs flex items-center gap-1 font-medium"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("OUT_OF_SERVICE")}
+                  className="h-8 cursor-pointer gap-1.5 border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-100 hover:text-slate-800 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:bg-slate-900/60"
+                  title="Mark selected ferries as Out of Service"
                 >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  {isBulkOperating && bulkActionType === "out_of_service" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
+                  <span>Out of Service</span>
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => setIsBulkDeleteModalOpen(true)}
+                  className="h-8 cursor-pointer gap-1.5 bg-rose-600 text-xs font-semibold text-white shadow-2xs hover:bg-rose-700"
+                  title="Delete selected ferries"
+                >
+                  {isBulkOperating && bulkActionType === "delete" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>Delete ({selectedCount})</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={clearSelection}
+                  className="h-8 cursor-pointer gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  title="Deselect all ferries"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Deselect</span>
                 </Button>
               </div>
             </div>
           )}
+
+          <DashboardTableCard
+            title="All Ferries"
+            headerRight={
+              selectedCount > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-medium">
+                    {selectedCount} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="cursor-pointer text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : undefined
+            }
+            columns={ferryColumns}
+            data={ferries}
+            keyExtractor={(item) => item.id}
+            rowClassName={(item) =>
+              selectedFerryIds.has(item.id)
+                ? "bg-emerald-500/10 hover:bg-emerald-500/15 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/40 border-l-2 border-l-emerald-600 dark:border-l-emerald-400"
+                : undefined
+            }
+          />
+
+          {/* Reusable Pagination Controls */}
+          <TablePagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            itemName="ferries"
+            isLoading={isFetching}
+          />
         </div>
       )}
 
@@ -1506,6 +1722,57 @@ export default function OperatorFerriesPage() {
                 </>
               ) : (
                 "Confirm Remove"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Bulk Delete Confirmation Modal */}
+      <Dialog
+        open={isBulkDeleteModalOpen}
+        onOpenChange={(open) => !open && !isBulkOperating && setIsBulkDeleteModalOpen(false)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-foreground text-base font-bold">
+                  Delete {selectedCount} {selectedCount === 1 ? "Ferry" : "Ferries"}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Are you sure you want to permanently delete {selectedCount} selected vessels from your fleet?
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={handleBulkDelete}
+              className="bg-rose-600 text-xs font-semibold text-white hover:bg-rose-700"
+            >
+              {isBulkOperating ? (
+                <>
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  Deleting {selectedCount} Ferries...
+                </>
+              ) : (
+                `Delete ${selectedCount} ${selectedCount === 1 ? "Ferry" : "Ferries"}`
               )}
             </Button>
           </DialogFooter>

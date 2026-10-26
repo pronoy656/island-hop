@@ -290,7 +290,7 @@ export function useAdminPortsQuery(params?: {
       return (
         response.data ?? {
           data: [],
-          meta: { page: 1, limit: 20, total: 0, totalPages: 1 }
+          meta: { page: 1, limit: 10, total: 0, totalPages: 1 }
         }
       );
     },

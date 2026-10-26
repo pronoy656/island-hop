@@ -261,7 +261,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
     return (
       <div className="w-full space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <Link
-          href="/dashboard/admin/providers"
+          href="/dashboard/admin/operators"
           className="group inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
@@ -314,7 +314,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       {/* Top Breadcrumb & Back Link */}
       <div className="flex items-center justify-between">
         <Link
-          href="/dashboard/admin/providers"
+          href="/dashboard/admin/operators"
           className="group inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />

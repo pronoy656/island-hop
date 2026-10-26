@@ -62,7 +62,6 @@ const STATUS_OPTIONS: { value: OperatorScheduleStatus; label: string }[] = [
 ];
 
 const PAGE_SIZE_OPTIONS = [
-  { value: "5", label: "5 per page" },
   { value: "10", label: "10 per page" },
   { value: "20", label: "20 per page" },
   { value: "50", label: "50 per page" }

@@ -33,7 +33,15 @@ import {
   useUpdateRouteMutation
 } from "@/hooks";
 
-import { DashboardTableCard, RouteImageUploader, StatusBadge, type TableColumn } from "@/widgets";
+import {
+  DashboardTableCard,
+  RouteImageUploader,
+  StatusBadge,
+  TablePagination,
+  TableToolbar,
+  type TableColumn,
+  type TableToolbarTab
+} from "@/widgets";
 import {
   Button,
   Card,
@@ -61,7 +69,6 @@ const ROUTE_STATUS_OPTIONS = [
 ];
 
 const PAGE_SIZE_OPTIONS = [
-  { value: "5", label: "5 per page" },
   { value: "10", label: "10 per page" },
   { value: "20", label: "20 per page" },
   { value: "50", label: "50 per page" }
@@ -436,21 +443,6 @@ export default function OperatorRoutesPage() {
     }
   }, [page, totalPages, isRoutesLoading, isRoutesFetching]);
 
-  const startIndex = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endIndex = Math.min(currentPage * pageSize, totalCount);
-
-  const pageNumbers = React.useMemo(() => {
-    if (totalPages <= 5) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    if (currentPage <= 3) {
-      return [1, 2, 3, 4, "...", totalPages];
-    }
-    if (currentPage >= totalPages - 2) {
-      return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-    }
-    return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
-  }, [currentPage, totalPages]);
 
   // Selection Computations
   const displayedRouteIds = React.useMemo(
@@ -1079,90 +1071,21 @@ export default function OperatorRoutesPage() {
             }
           />
 
-          {/* Pagination Controls */}
-          {totalCount > 0 && (
-            <div className="bg-card border-border/80 flex flex-col items-center justify-between gap-3.5 rounded-xl border p-3 shadow-xs sm:flex-row sm:px-4">
-              {/* Left: Showing entries info & Page size selector */}
-              <div className="text-muted-foreground flex w-full flex-wrap items-center justify-between gap-3 text-xs sm:w-auto sm:justify-start">
-                <span>
-                  Showing <span className="text-foreground font-semibold">{startIndex}</span> to{" "}
-                  <span className="text-foreground font-semibold">{endIndex}</span> of{" "}
-                  <span className="text-foreground font-semibold">{totalCount}</span>{" "}
-                  {isSearching ? "matching routes" : "routes"}
-                  {isSearching && (
-                    <span className="text-muted-foreground ml-1">
-                      for &ldquo;
-                      <span className="text-foreground font-medium">{debouncedSearch}</span>&rdquo;
-                    </span>
-                  )}
-                </span>
-
-                <div className="sm:border-border/60 flex items-center gap-1.5 pl-0 sm:border-l sm:pl-3">
-                  <span className="text-muted-foreground text-[11px] whitespace-nowrap">Show:</span>
-                  <ReusableSelect
-                    value={String(pageSize)}
-                    onValueChange={(val) => setPageSize(Number(val))}
-                    options={PAGE_SIZE_OPTIONS}
-                    className="h-8 w-[115px] text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Right: Page Navigation Buttons */}
-              <div className="flex items-center gap-1.5 self-center sm:self-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage <= 1}
-                  className="flex h-8 items-center gap-1 px-2.5 text-xs font-medium cursor-pointer"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Previous</span>
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {pageNumbers.map((p, idx) =>
-                    typeof p === "number" ? (
-                      <Button
-                        key={p}
-                        variant={currentPage === p ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPage(p)}
-                        disabled={currentPage === p}
-                        className={cn(
-                          "h-8 min-w-8 px-2 text-xs font-semibold cursor-pointer",
-                          currentPage === p
-                            ? "bg-emerald-600 text-white shadow-xs hover:bg-emerald-700"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {p}
-                      </Button>
-                    ) : (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        className="text-muted-foreground px-1 text-xs font-bold select-none"
-                      >
-                        ...
-                      </span>
-                    )
-                  )}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="flex h-8 items-center gap-1 px-2.5 text-xs font-medium cursor-pointer"
-                >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Reusable Pagination Controls */}
+          <TablePagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            itemName={isSearching ? "matching routes" : "routes"}
+            isLoading={isRoutesFetching}
+          />
         </div>
       )}
 

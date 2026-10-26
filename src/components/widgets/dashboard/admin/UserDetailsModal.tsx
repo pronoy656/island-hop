@@ -180,7 +180,7 @@ export function UserDetailsModal({
                   Operator Business Profile
                 </div>
                 <Link
-                  href={`/dashboard/admin/providers/${user.operatorProfile.id}`}
+                  href={`/dashboard/admin/operators/${user.operatorProfile.id}`}
                   className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
                 >
                   View Provider Hub
