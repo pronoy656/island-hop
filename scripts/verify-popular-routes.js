@@ -7,8 +7,28 @@
  * at http://localhost:5003/api/v1/routes/popular and its data integrity.
  * ============================================================================
  */
+const fs = require('fs');
+const path = require('path');
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:5003/api/v1';
+function loadEnv() {
+  for (const file of ['.env.local', '.env']) {
+    const fullPath = path.resolve(__dirname, '..', file);
+    if (fs.existsSync(fullPath)) {
+      const content = fs.readFileSync(fullPath, 'utf8');
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const [k, ...v] = trimmed.split('=');
+        if (k && !process.env[k.trim()]) {
+          process.env[k.trim()] = v.join('=').trim().replace(/^["']|["']$/g, '');
+        }
+      }
+    }
+  }
+}
+loadEnv();
+
+const API_BASE = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003/api/v1';
 
 const colors = {
   reset: '\x1b[0m',
