@@ -92,7 +92,10 @@ export function BookingDetailsModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 rounded-2xl">
+        <DialogContent
+          className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 rounded-2xl"
+          closeButtonClassName="text-white/80 hover:text-white hover:bg-white/20 rounded-full"
+        >
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-6 text-white relative">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -101,7 +104,7 @@ export function BookingDetailsModal({
                   <Ticket className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mr-9 shrink-0">
                     <span className="font-mono text-base font-bold tracking-tight text-white">
                       {booking.reference}
                     </span>

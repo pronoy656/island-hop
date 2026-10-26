@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   ApiResponse,
   IAdminUserItem,
   UserFilterParams
 } from "@/types";
-import { get } from "@/lib/api";
+import { get, patch } from "@/lib/api";
 
 /**
  * Users Query Key Factory
@@ -97,5 +97,29 @@ export function useUserDetailQuery(userId: string, enabled = true) {
     },
     enabled: Boolean(userId) && enabled,
     staleTime: 1000 * 60 * 3
+  });
+}
+
+/**
+ * 3. Mutation: Update User / Passenger Operational Status (ACTIVE / SUSPENDED)
+ */
+export function useUpdateUserStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      status
+    }: {
+      userId: string;
+      status: "ACTIVE" | "SUSPENDED";
+    }) => {
+      return await patch<ApiResponse<IAdminUserItem>>(`/users/${userId}/status`, {
+        status
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+    }
   });
 }

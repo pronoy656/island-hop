@@ -9,7 +9,6 @@ import {
   Building2,
   Calendar,
   CheckCircle2,
-  DollarSign,
   FileText,
   Mail,
   MapPin,
@@ -39,6 +38,7 @@ import {
   FerryDetailsModal,
   StatCard,
   StatusBadge,
+  TablePagination,
   type TableColumn
 } from "../index";
 
@@ -87,6 +87,11 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
   const [isActivateModalOpen, setIsActivateModalOpen] = React.useState(false);
   const [selectedFerry, setSelectedFerry] = React.useState<ProviderFerryRow | null>(null);
   const [suspendReason, setSuspendReason] = React.useState("Scheduled Compliance & Safety Audit");
+
+  const [ferriesPage, setFerriesPage] = React.useState(1);
+  const [ferriesPageSize, setFerriesPageSize] = React.useState(5);
+  const [routesPage, setRoutesPage] = React.useState(1);
+  const [routesPageSize, setRoutesPageSize] = React.useState(5);
 
   const handleConfirmSuspend = () => {
     updateStatusMutation.mutate(
@@ -149,12 +154,6 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       className: "text-center font-medium text-foreground",
       align: "center",
       cell: (item) => `${item.capacity} Pax`
-    },
-    {
-      header: "YEAR BUILT",
-      className: "font-mono text-muted-foreground text-center",
-      align: "center",
-      cell: (item) => item.yearBuilt || "N/A"
     },
     {
       header: "STATUS",
@@ -247,8 +246,8 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8 animate-pulse">
         <div className="h-4 w-36 rounded bg-muted/50 mb-4" />
         <div className="h-44 rounded-2xl border border-border/60 bg-muted/20" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {[1, 2].map((i) => (
             <div key={i} className="h-28 rounded-xl border border-border/40 bg-muted/20" />
           ))}
         </div>
@@ -304,6 +303,22 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
     price: r.basePrice || r.price || 40.0,
     status: r.status === "ACTIVE" ? "Active" : "Inactive"
   }));
+
+  const totalFerries = formattedFerries.length;
+  const totalFerriesPages = Math.max(1, Math.ceil(totalFerries / ferriesPageSize));
+  const validFerriesPage = Math.min(Math.max(1, ferriesPage), totalFerriesPages);
+  const paginatedFerries = React.useMemo(() => {
+    const startIndex = (validFerriesPage - 1) * ferriesPageSize;
+    return formattedFerries.slice(startIndex, startIndex + ferriesPageSize);
+  }, [formattedFerries, validFerriesPage, ferriesPageSize]);
+
+  const totalRoutes = formattedRoutes.length;
+  const totalRoutesPages = Math.max(1, Math.ceil(totalRoutes / routesPageSize));
+  const validRoutesPage = Math.min(Math.max(1, routesPage), totalRoutesPages);
+  const paginatedRoutes = React.useMemo(() => {
+    const startIndex = (validRoutesPage - 1) * routesPageSize;
+    return formattedRoutes.slice(startIndex, startIndex + routesPageSize);
+  }, [formattedRoutes, validRoutesPage, routesPageSize]);
 
   const registeredDateStr = provider.createdAt
     ? new Date(provider.createdAt).toLocaleDateString()
@@ -361,7 +376,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
         </div>
 
         {/* Contact & Hub Details Bar */}
-        <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border/60 pt-5 sm:grid-cols-3 text-xs">
+        <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border/60 pt-5 sm:grid-cols-2 text-xs">
           <div className="flex items-center gap-2.5">
             <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-lg">
               <Mail className="h-4 w-4" />
@@ -391,23 +406,11 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
               </a>
             </div>
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-lg">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Operating Base</p>
-              <p className="font-semibold text-foreground truncate">
-                {provider.businessAddress || "Main Port Terminal"}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Core KPI Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="FLEET FERRIES"
           value={formattedFerries.length}
@@ -426,87 +429,65 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
           comparisonText="Active corridors"
           showWave={true}
         />
-        <StatCard
-          label="REVENUE SPLIT"
-          value="90% Net"
-          icon={DollarSign}
-          changePercent={0}
-          trend="up"
-          comparisonText="10% platform commission"
-          showWave={true}
-        />
-        <StatCard
-          label="ACCOUNT STATUS"
-          value={isActive ? "ACTIVE" : "SUSPENDED"}
-          icon={ShieldAlert}
-          changePercent={0}
-          trend={isActive ? "up" : "down"}
-          comparisonText={isActive ? "Live in public booking" : "Hidden from booking"}
-          showWave={true}
-        />
-      </div>
-
-      {/* Revenue Metrics & Commercial Settlement Model */}
-      <div className="bg-card text-card-foreground border-border/80 rounded-2xl border p-5 sm:p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <DollarSign className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-sm sm:text-base font-bold text-foreground">
-                Revenue Metrics & Settlement Model
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Commercial agreements, operator commission splits, and automated payouts.
-              </p>
-            </div>
-          </div>
-          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/80 w-fit">
-            Standard 90/10 Commission Split
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-          <div className="bg-muted/30 border border-border/60 rounded-xl p-3.5 space-y-1">
-            <span className="text-muted-foreground font-medium">Operator Net Share</span>
-            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">90.0%</p>
-            <p className="text-[11px] text-muted-foreground">Direct net earnings from passenger tickets</p>
-          </div>
-
-          <div className="bg-muted/30 border border-border/60 rounded-xl p-3.5 space-y-1">
-            <span className="text-muted-foreground font-medium">Platform Commission</span>
-            <p className="text-xl font-black text-blue-600 dark:text-blue-400">10.0%</p>
-            <p className="text-[11px] text-muted-foreground">FerryGo booking service & hosting fee</p>
-          </div>
-
-          <div className="bg-muted/30 border border-border/60 rounded-xl p-3.5 space-y-1">
-            <span className="text-muted-foreground font-medium">Settlement Schedule</span>
-            <p className="text-xl font-black text-foreground">Weekly</p>
-            <p className="text-[11px] text-muted-foreground">Direct bank deposit every Monday</p>
-          </div>
-        </div>
       </div>
 
       {/* Side-by-Side Tables: Ferries Fleet & Operating Routes */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Fleet Ferries Table */}
-        <DashboardTableCard
-          title={`Registered Ferries (${formattedFerries.length})`}
-          columns={ferryColumns}
-          data={formattedFerries}
-          keyExtractor={(item) => item.id}
-          emptyMessage="No ferries assigned to this operator yet."
-        />
+        <div className="flex flex-col gap-3">
+          <DashboardTableCard
+            title={`Registered Ferries (${totalFerries})`}
+            columns={ferryColumns}
+            data={paginatedFerries}
+            keyExtractor={(item) => item.id}
+            emptyMessage="No ferries assigned to this operator yet."
+          />
+          <TablePagination
+            page={validFerriesPage}
+            totalPages={totalFerriesPages}
+            totalCount={totalFerries}
+            pageSize={ferriesPageSize}
+            onPageChange={setFerriesPage}
+            onPageSizeChange={(newSize) => {
+              setFerriesPageSize(newSize);
+              setFerriesPage(1);
+            }}
+            pageSizeOptions={[
+              { value: "5", label: "5 per page" },
+              { value: "10", label: "10 per page" },
+              { value: "20", label: "20 per page" }
+            ]}
+            itemName="ferries"
+          />
+        </div>
 
         {/* Operating Routes Table */}
-        <DashboardTableCard
-          title={`Active Operating Routes (${formattedRoutes.length})`}
-          columns={routeColumns}
-          data={formattedRoutes}
-          keyExtractor={(item) => item.id}
-          emptyMessage="No routes configured for this operator yet."
-        />
+        <div className="flex flex-col gap-3">
+          <DashboardTableCard
+            title={`Active Operating Routes (${totalRoutes})`}
+            columns={routeColumns}
+            data={paginatedRoutes}
+            keyExtractor={(item) => item.id}
+            emptyMessage="No routes configured for this operator yet."
+          />
+          <TablePagination
+            page={validRoutesPage}
+            totalPages={totalRoutesPages}
+            totalCount={totalRoutes}
+            pageSize={routesPageSize}
+            onPageChange={setRoutesPage}
+            onPageSizeChange={(newSize) => {
+              setRoutesPageSize(newSize);
+              setRoutesPage(1);
+            }}
+            pageSizeOptions={[
+              { value: "5", label: "5 per page" },
+              { value: "10", label: "10 per page" },
+              { value: "20", label: "20 per page" }
+            ]}
+            itemName="routes"
+          />
+        </div>
       </div>
 
       {/* Operator Account Management & Status Controls */}

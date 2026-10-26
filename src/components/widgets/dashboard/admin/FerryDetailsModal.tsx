@@ -32,7 +32,10 @@ export function FerryDetailsModal({ ferry, open, onOpenChange }: FerryDetailsMod
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+      <DialogContent
+        className="sm:max-w-lg p-0 overflow-hidden"
+        closeButtonClassName="text-white/80 hover:text-white hover:bg-white/20 rounded-full"
+      >
         {/* Header Hero Banner */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
           <div className="flex items-start justify-between">
@@ -54,7 +57,7 @@ export function FerryDetailsModal({ ferry, open, onOpenChange }: FerryDetailsMod
 
             <span
               className={cn(
-                "rounded-full px-3 py-1 text-xs font-bold border shadow-2xs backdrop-blur-md",
+                "rounded-full px-3 py-1 text-xs font-bold border shadow-2xs backdrop-blur-md mr-9 shrink-0",
                 ferry.status === "In Service" && "bg-emerald-500/20 text-emerald-100 border-emerald-300/40",
                 ferry.status === "Maintenance" && "bg-amber-500/20 text-amber-100 border-amber-300/40",
                 ferry.status === "Docked" && "bg-blue-500/20 text-blue-100 border-blue-300/40"

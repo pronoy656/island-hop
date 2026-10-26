@@ -57,7 +57,10 @@ export function PaymentDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
+      <DialogContent
+        className="sm:max-w-xl p-0 overflow-hidden"
+        closeButtonClassName="text-white/80 hover:text-white hover:bg-white/20 rounded-full"
+      >
         {/* Header Hero Banner */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
           <div className="flex items-start justify-between">
@@ -83,7 +86,9 @@ export function PaymentDetailsModal({
               </div>
             </div>
 
-            <StatusBadge status={payment.paymentStatus} className="text-xs px-3 py-1 font-bold shadow-2xs" />
+            <div className="mr-9 shrink-0">
+              <StatusBadge status={payment.paymentStatus} className="text-xs px-3 py-1 font-bold shadow-2xs" />
+            </div>
           </div>
         </div>
 

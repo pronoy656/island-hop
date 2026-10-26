@@ -4,23 +4,30 @@ import * as React from "react";
 import Link from "next/link";
 import {
   AlertCircle,
+  AlertTriangle,
   Building2,
+  Check,
   CheckCircle2,
+  Download,
   Eye,
+  Loader2,
   Mail,
   Navigation,
   RefreshCw,
   Ship,
   UserCheck,
-  Users
+  Users,
+  X
 } from "lucide-react";
+import { toast } from "sonner";
 
-import { useAdminProvidersQuery } from "@/hooks/use-admin";
+import { useAdminProvidersQuery, useUpdateProviderStatusMutation } from "@/hooks/use-admin";
 import { useDebounce } from "@/hooks/use-debounce";
 import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Tabs,
   TabsList,
   TabsTrigger
@@ -90,7 +97,164 @@ export default function AdminOperatorsPage() {
   const suspendedCount = providers.filter((p) => p.user?.status === "SUSPENDED").length;
   const totalFleetsCount = providers.reduce((acc, p) => acc + (p.ferriesCount ?? 0), 0);
 
+  // Bulk selection & action states
+  const [selectedOperatorIds, setSelectedOperatorIds] = React.useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = React.useState(false);
+  const [bulkActionType, setBulkActionType] = React.useState<"activate" | "suspend" | null>(null);
+
+  const updateProviderStatusMutation = useUpdateProviderStatusMutation();
+
+  // Reset selection on page, tab, or search change
+  React.useEffect(() => {
+    setSelectedOperatorIds(new Set());
+  }, [page, activeTab, debouncedSearch]);
+
+  const selectedCount = selectedOperatorIds.size;
+  const currentPageIds = React.useMemo(
+    () => displayedProviders.map((p) => p.id),
+    [displayedProviders]
+  );
+
+  const isAllCurrentPageSelected =
+    currentPageIds.length > 0 &&
+    currentPageIds.every((id) => selectedOperatorIds.has(id));
+
+  const isSomeCurrentPageSelected =
+    currentPageIds.some((id) => selectedOperatorIds.has(id)) &&
+    !isAllCurrentPageSelected;
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedOperatorIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllCurrentPage = () => {
+    if (isAllCurrentPageSelected) {
+      setSelectedOperatorIds((prev) => {
+        const next = new Set(prev);
+        currentPageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedOperatorIds((prev) => {
+        const next = new Set(prev);
+        currentPageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const clearSelection = () => setSelectedOperatorIds(new Set());
+
+  // Bulk Status Update Handler
+  const handleBulkStatusChange = async (targetStatus: "ACTIVE" | "SUSPENDED") => {
+    if (selectedOperatorIds.size === 0 || isBulkOperating) return;
+    setIsBulkOperating(true);
+    setBulkActionType(targetStatus === "ACTIVE" ? "activate" : "suspend");
+
+    const ids = Array.from(selectedOperatorIds);
+    let successCount = 0;
+
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          updateProviderStatusMutation.mutateAsync({
+            providerId: id,
+            payload: { status: targetStatus }
+          })
+        )
+      );
+
+      results.forEach((r) => {
+        if (r.status === "fulfilled") successCount++;
+      });
+
+      if (successCount > 0) {
+        toast.success(
+          `Successfully updated ${successCount} ${successCount === 1 ? "operator" : "operators"} to ${
+            targetStatus === "ACTIVE" ? "Active" : "Suspended"
+          }`
+        );
+        refetch();
+        clearSelection();
+      } else {
+        toast.error("Failed to update selected operators.");
+      }
+    } catch {
+      toast.error("An error occurred during bulk update.");
+    } finally {
+      setIsBulkOperating(false);
+      setBulkActionType(null);
+    }
+  };
+
+  // Bulk CSV Export Handler
+  const handleBulkExportCSV = () => {
+    const selectedItems = providers.filter((p) => selectedOperatorIds.has(p.id));
+    if (selectedItems.length === 0) return;
+
+    const headers = ["Company Name", "Contact Person", "Email", "Status", "Ferries", "Routes", "Registered Date"];
+    const rows = selectedItems.map((p) => [
+      `"${(p.companyName || "").replace(/"/g, '""')}"`,
+      `"${(p.contactPersonName || p.user?.name || "").replace(/"/g, '""')}"`,
+      `"${(p.user?.email || p.contactEmail || "").replace(/"/g, '""')}"`,
+      `"${p.user?.status || "ACTIVE"}"`,
+      p.ferriesCount ?? 0,
+      p.routesCount ?? 0,
+      `"${new Date(p.createdAt).toLocaleDateString()}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `operators_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${selectedItems.length} operators to CSV`);
+  };
+
   const providerColumns: TableColumn<IAdminProviderItem>[] = [
+    {
+      header: (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              isAllCurrentPageSelected
+                ? true
+                : isSomeCurrentPageSelected
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={toggleSelectAllCurrentPage}
+            aria-label="Select all operators on current page"
+          />
+        </div>
+      ),
+      headerClassName: "w-10 px-3 text-center",
+      className: "w-10 px-3 text-center",
+      align: "center",
+      cell: (item) => {
+        const isChecked = selectedOperatorIds.has(item.id);
+        return (
+          <div
+            className="flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => toggleSelectRow(item.id)}
+              aria-label={`Select operator ${item.companyName}`}
+            />
+          </div>
+        );
+      }
+    },
     {
       header: "OPERATOR",
       cell: (item) => (
@@ -298,6 +462,94 @@ export default function AdminOperatorsPage() {
       ) : (
         /* Providers Table Card */
         <div className="space-y-3">
+          {/* Bulk Action Sticky / Floating Toolbar */}
+          {selectedCount > 0 && (
+            <div className="bg-card/95 dark:bg-card/90 border-blue-500/30 sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 shadow-lg backdrop-blur-md transition-all animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 text-xs font-bold text-white shadow-2xs">
+                  {selectedCount}
+                </span>
+                <span className="text-foreground text-xs font-semibold">
+                  {selectedCount === 1 ? "operator selected" : "operators selected"}
+                </span>
+
+                {displayedProviders.length > 0 &&
+                  isAllCurrentPageSelected &&
+                  totalCount > displayedProviders.length &&
+                  selectedCount < totalCount && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOperatorIds(new Set(providers.map((p) => p.id)));
+                      }}
+                      className="ml-2 cursor-pointer text-xs font-semibold text-blue-600 underline-offset-4 hover:underline dark:text-blue-400"
+                    >
+                      Select all {totalCount} operators in current dataset
+                    </button>
+                  )}
+              </div>
+
+              {/* Bulk Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkStatusChange("ACTIVE")}
+                  className="h-8 cursor-pointer gap-1.5 border-emerald-200 bg-emerald-50/50 text-xs font-semibold text-emerald-700 shadow-2xs hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+                  title="Activate selected operators"
+                >
+                  {isBulkOperating && bulkActionType === "activate" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                  )}
+                  <span>Activate</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkStatusChange("SUSPENDED")}
+                  className="h-8 cursor-pointer gap-1.5 border-amber-200 bg-amber-50/50 text-xs font-semibold text-amber-700 shadow-2xs hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                  title="Suspend selected operators"
+                >
+                  {isBulkOperating && bulkActionType === "suspend" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
+                  <span>Suspend</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={handleBulkExportCSV}
+                  className="h-8 cursor-pointer gap-1.5 border-blue-200 bg-blue-50/50 text-xs font-semibold text-blue-700 shadow-2xs hover:bg-blue-100 hover:text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/60"
+                  title="Export selected operators as CSV"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Export CSV</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={clearSelection}
+                  className="h-8 cursor-pointer gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  title="Deselect all operators"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Deselect</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
           <DashboardTableCard
             title="Registered Operators"
             columns={providerColumns}
