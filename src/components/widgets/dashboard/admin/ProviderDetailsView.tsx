@@ -225,11 +225,6 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       )
     },
     {
-      header: "DEPARTURE → ARRIVAL",
-      className: "text-muted-foreground text-xs",
-      cell: (item) => `${item.departurePort} → ${item.arrivalPort}`
-    },
-    {
       header: "DURATION",
       accessorKey: "duration",
       className: "font-mono text-muted-foreground text-center",
