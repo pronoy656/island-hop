@@ -33,13 +33,22 @@ import {
 
 export type TimeRangeFilter = "7d" | "15d" | "30d" | "month";
 
+const TIME_RANGE_DAYS_MAP: Record<TimeRangeFilter, number> = {
+  "7d": 7,
+  "15d": 15,
+  "30d": 30,
+  "month": 30
+};
+
 export function AdminDashboardView() {
   const [globalTimeRange, setGlobalTimeRange] = React.useState<TimeRangeFilter>("30d");
   const [revenueTimeRange, setRevenueTimeRange] = React.useState<TimeRangeFilter>("30d");
   const [bookingsTimeRange, setBookingsTimeRange] = React.useState<TimeRangeFilter>("30d");
 
+  const selectedDays = TIME_RANGE_DAYS_MAP[globalTimeRange] ?? 30;
+
   // Live Backend Query mediated by TanStack Query hook
-  const { data: analytics, isLoading, isError, error, refetch } = useAdminAnalyticsQuery();
+  const { data: analytics, isLoading, isError, error, refetch } = useAdminAnalyticsQuery(selectedDays);
 
   // Handler for global time range change that also syncs the charts
   const handleGlobalTimeRangeChange = (range: TimeRangeFilter) => {
@@ -189,37 +198,28 @@ export function AdminDashboardView() {
             label="GROSS REVENUE"
             value={`$${(analytics?.financials?.grossSales ?? 0).toFixed(2)}`}
             icon={DollarSign}
-            changePercent={10}
-            trend="up"
-            comparisonText={`$${(analytics?.financials?.platformCommission ?? 0).toFixed(2)} comm. • $${(analytics?.financials?.providerPayout ?? 0).toFixed(2)} payout`}
-            showWave={true}
+            changePercent={analytics?.financials?.changePercent ?? analytics?.growth?.revenuePercent}
+            comparisonText="vs previous period"
           />
           <StatCard
             label="TOTAL BOOKINGS"
             value={(analytics?.bookings?.total ?? 0).toLocaleString()}
             icon={Ticket}
-            changePercent={12.4}
-            trend="up"
-            comparisonText={`${analytics?.bookings?.confirmed ?? 0} confirmed, ${analytics?.bookings?.cancelled ?? 0} cancelled`}
-            showWave={true}
+            changePercent={analytics?.bookings?.changePercent ?? analytics?.growth?.bookingsPercent}
+            comparisonText="vs previous period"
           />
           <StatCard
             label="TOTAL PASSENGERS"
             value={(analytics?.passengers?.totalPax ?? 0).toLocaleString()}
             icon={Users}
-            changePercent={18.2}
-            trend="up"
-            comparisonText={`${analytics?.passengers?.boardedPax ?? 0} boarded`}
-            showWave={true}
+            changePercent={analytics?.passengers?.changePercent ?? analytics?.growth?.passengersPercent}
+            comparisonText={`Ticketed (${analytics?.passengers?.boardedPax ?? 0} boarded)`}
           />
           <StatCard
             label="FLEET & OPERATORS"
             value={`${analytics?.fleet?.total ?? 0} Ferries`}
             icon={Ship}
-            changePercent={0}
-            trend="neutral"
-            comparisonText={`${analytics?.providers?.active ?? 0} active provider • ${analytics?.fleet?.inService ?? 0} in service`}
-            showWave={true}
+            comparisonText={`${analytics?.providers?.active ?? 0} Active ${(analytics?.providers?.active ?? 0) === 1 ? "Operator" : "Operators"} • ${analytics?.fleet?.inService ?? 0} In Service`}
           />
         </div>
       )}
@@ -285,7 +285,7 @@ export function AdminDashboardView() {
                     {analytics?.bookings?.checkedIn ?? 0}
                   </p>
                   <span className="text-[10px] font-medium text-muted-foreground mt-0.5 inline-block">
-                    Boarded pax
+                    Boarded passengers
                   </span>
                 </div>
               </div>
@@ -322,9 +322,6 @@ export function AdminDashboardView() {
                 Gross sales volume & operator payout
               </span>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
-              10% Policy
-            </span>
           </div>
 
           {isLoading ? (
@@ -355,9 +352,6 @@ export function AdminDashboardView() {
                   <p className="text-2xl font-extrabold tracking-tight text-blue-600 dark:text-blue-400">
                     ${(analytics?.financials?.platformCommission ?? 0).toFixed(2)}
                   </p>
-                  <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 mt-0.5 inline-block">
-                    10% Platform fee
-                  </span>
                 </div>
               </div>
 
@@ -368,9 +362,6 @@ export function AdminDashboardView() {
                   <p className="text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
                     ${(analytics?.financials?.providerPayout ?? 0).toFixed(2)}
                   </p>
-                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 inline-block">
-                    90% Net split
-                  </span>
                 </div>
               </div>
             </div>

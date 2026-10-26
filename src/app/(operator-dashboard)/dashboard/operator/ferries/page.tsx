@@ -289,20 +289,29 @@ export default function OperatorFerriesPage() {
     }
   }, [ferriesData?.ferries]);
 
-  const ferries = localFerries;
-
   // Pagination calculations
   const meta = ferriesData?.meta;
   const totalCount = meta?.total ?? localFerries.length;
   const totalPages = Math.max(1, meta?.totalPages ?? Math.ceil(totalCount / pageSize));
   const currentPage = Math.min(Math.max(page, 1), totalPages);
 
-  // Keep page clamped if items are deleted or filtered
+  // Sliced ferries for resilience in case backend returns all items
+  const displayedFerries = React.useMemo(() => {
+    if (localFerries.length > pageSize) {
+      const start = (currentPage - 1) * pageSize;
+      return localFerries.slice(start, start + pageSize);
+    }
+    return localFerries;
+  }, [localFerries, currentPage, pageSize]);
+
+  const ferries = displayedFerries;
+
+  // Keep page clamped ONLY when query has settled and is not in flight
   React.useEffect(() => {
-    if (page > totalPages && totalPages > 0) {
+    if (!isLoading && !isFetching && ferriesData && page > totalPages && totalPages > 0) {
       setPage(totalPages);
     }
-  }, [page, totalPages]);
+  }, [page, totalPages, isLoading, isFetching, ferriesData]);
 
 
   // Form states

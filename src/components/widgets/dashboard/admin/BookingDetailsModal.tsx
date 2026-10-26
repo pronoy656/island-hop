@@ -42,13 +42,17 @@ export interface BookingDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onBookingCancelled?: () => void;
+  onCheckIn?: (booking: IAdminBookingItem) => void;
+  isCheckingIn?: boolean;
 }
 
 export function BookingDetailsModal({
   booking,
   open,
   onOpenChange,
-  onBookingCancelled
+  onBookingCancelled,
+  onCheckIn,
+  isCheckingIn
 }: BookingDetailsModalProps) {
   const [showCancelConfirm, setShowCancelConfirm] = React.useState(false);
   const cancelMutation = useCancelBookingMutation();
@@ -104,29 +108,33 @@ export function BookingDetailsModal({
                   <Ticket className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 mr-9 shrink-0">
-                    <span className="font-mono text-base font-bold tracking-tight text-white">
-                      {booking.reference}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <DialogTitle asChild>
+                      <span className="font-mono text-base font-bold tracking-tight text-white">
+                        {booking.reference}
+                      </span>
+                    </DialogTitle>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(booking.reference, "Booking reference")}
-                      className="text-white/70 hover:text-white transition-colors"
+                      className="text-white/70 hover:text-white transition-colors cursor-pointer"
                       title="Copy Reference"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <p className="text-xs text-white/80">
-                    Booked on{" "}
-                    {booking.createdAt
-                      ? format(new Date(booking.createdAt), "MMM dd, yyyy • hh:mm a")
-                      : "—"}
-                  </p>
+                  <DialogDescription asChild>
+                    <p className="text-xs text-white/80">
+                      Booked on{" "}
+                      {booking.createdAt
+                        ? format(new Date(booking.createdAt), "MMM dd, yyyy • hh:mm a")
+                        : "—"}
+                    </p>
+                  </DialogDescription>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-9 shrink-0">
                 <StatusBadge status={booking.status} className="border-white/30 bg-white/20 text-white font-bold" />
               </div>
             </div>
@@ -180,7 +188,7 @@ export function BookingDetailsModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 text-xs">
                 <div>
                   <span className="text-muted-foreground text-[11px]">Travel Date</span>
                   <p className="font-semibold text-foreground">
@@ -191,18 +199,6 @@ export function BookingDetailsModal({
                   <span className="text-muted-foreground text-[11px]">Ferry Vessel</span>
                   <p className="font-semibold text-foreground">
                     {ferryName} {ferryReg ? `(${ferryReg})` : ""}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-[11px]">Boarding Gate</span>
-                  <p className="font-semibold text-foreground font-mono">
-                    {schedule?.gate || "Standard Pier"}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-[11px]">Master / Captain</span>
-                  <p className="font-semibold text-foreground">
-                    {schedule?.captain || "Certified Master"}
                   </p>
                 </div>
               </div>
@@ -331,34 +327,37 @@ export function BookingDetailsModal({
             )}
           </div>
 
-          {/* Modal Footer */}
-          <div className="border-t border-border/70 bg-muted/20 px-6 py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              {booking.status !== "CANCELLED" && (
+          {/* Modal Footer (only when cancelable or checkable-in) */}
+          {booking.status !== "CANCELLED" && (
+            <div className="border-t border-border/70 bg-muted/20 px-6 py-4 flex items-center justify-between gap-3">
+              {onCheckIn && booking.status === "CONFIRMED" ? (
                 <Button
                   type="button"
-                  variant="destructive"
                   size="sm"
-                  onClick={() => setShowCancelConfirm(true)}
-                  disabled={cancelMutation.isPending}
-                  className="gap-1.5 text-xs font-semibold"
+                  onClick={() => onCheckIn(booking)}
+                  disabled={isCheckingIn}
+                  className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                 >
-                  <Ban className="h-3.5 w-3.5" />
-                  <span>Cancel Reservation</span>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>{isCheckingIn ? "Checking In..." : "Check In Passenger"}</span>
                 </Button>
+              ) : (
+                <div />
               )}
-            </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-xs font-medium"
-            >
-              Close Window
-            </Button>
-          </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowCancelConfirm(true)}
+                disabled={cancelMutation.isPending}
+                className="gap-1.5 text-xs font-semibold cursor-pointer"
+              >
+                <Ban className="h-3.5 w-3.5" />
+                <span>Cancel Reservation</span>
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -61,6 +61,7 @@ export function useFerriesQuery(params?: IFerryFilterParams) {
         meta
       };
     },
+    placeholderData: (previousData) => previousData,
     staleTime: 0, // Fresh queries immediately
     refetchOnWindowFocus: true,
     retry: (failureCount, error) => {

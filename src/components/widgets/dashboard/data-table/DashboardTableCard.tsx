@@ -36,6 +36,7 @@ export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
     normalizedStatus === "confirmed" ||
     normalizedStatus === "active" ||
     normalizedStatus === "completed" ||
+    normalizedStatus === "arrived" ||
     normalizedStatus === "success" ||
     normalizedStatus === "on schedule" ||
     normalizedStatus === "on time" ||
@@ -50,7 +51,6 @@ export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
     normalizedStatus === "cancelled" ||
     normalizedStatus === "failed" ||
     normalizedStatus === "rejected" ||
-    normalizedStatus === "delayed" ||
     normalizedStatus === "out of service" ||
     normalizedStatus === "out_of_service"
   ) {
@@ -60,6 +60,7 @@ export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
     normalizedStatus === "suspended" ||
     normalizedStatus === "pending" ||
     normalizedStatus === "warning" ||
+    normalizedStatus === "delayed" ||
     normalizedStatus === "almost full" ||
     normalizedStatus === "filling fast" ||
     normalizedStatus === "tentative" ||
@@ -75,6 +76,13 @@ export function StatusBadge({ status, className, ...props }: StatusBadgeProps) {
   ) {
     colorClasses =
       "bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/60";
+  } else if (
+    normalizedStatus === "departed" ||
+    normalizedStatus === "in transit" ||
+    normalizedStatus === "in_transit"
+  ) {
+    colorClasses =
+      "bg-purple-50 text-purple-700 border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800/60";
   }
 
   return (

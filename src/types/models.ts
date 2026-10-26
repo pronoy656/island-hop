@@ -128,15 +128,23 @@ export interface IAdminAnalyticsOverview {
     confirmed: number;
     checkedIn: number;
     cancelled: number;
+    changePercent?: number;
   };
   passengers: {
     totalPax: number;
     boardedPax: number;
+    changePercent?: number;
   };
   financials: {
     grossSales: number;
     platformCommission: number;
     providerPayout: number;
+    changePercent?: number;
+  };
+  growth?: {
+    revenuePercent: number;
+    bookingsPercent: number;
+    passengersPercent: number;
   };
   recentProviders: Array<{
     id: string;
@@ -660,7 +668,7 @@ export interface IDigitalPassResponse {
 // OPERATOR SCHEDULE MANAGEMENT TYPES
 // ==========================================
 
-export type OperatorScheduleStatus = "ON_TIME" | "BOARDING" | "DEPARTED" | "DELAYED" | "CANCELLED";
+export type OperatorScheduleStatus = "ON_TIME" | "BOARDING" | "DEPARTED" | "DELAYED" | "ARRIVED" | "CANCELLED";
 
 export interface IOperatorSchedule {
   id: string;
@@ -954,4 +962,72 @@ export interface IAdminBookingsResponseData {
   };
   data: IAdminBookingItem[];
 }
+
+// ==========================================
+// OPERATOR BOOKING TYPES (LIVE API)
+// ==========================================
+
+export interface IOperatorBookingFilterParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+}
+
+export type IOperatorBookingTicket = IAdminBookingTicket;
+export type IOperatorBookingItem = IAdminBookingItem;
+
+export interface IOperatorBookingsResponseData {
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  data: IOperatorBookingItem[];
+}
+
+// ==========================================
+// OPERATOR MANIFEST & BOARDING TYPES
+// ==========================================
+
+export type BoardingStatusType = "PENDING" | "CHECKED_IN" | "BOARDED";
+
+export interface IManifestPassengerRecord {
+  ticketId: string;
+  ticketNumber: string;
+  bookingReference: string;
+  passengerName: string;
+  nationality: string;
+  passportOrId: string;
+  cabinClass: string;
+  luggageCount: number;
+  boardingStatus: BoardingStatusType;
+  boardedAt: string | null;
+}
+
+export interface ITripManifestInfo {
+  tripId: string;
+  vesselName: string;
+  captain: string | null;
+  departurePort: string;
+  destinationPort: string;
+  departureTime: string;
+  arrivalTime: string;
+  tripStatus: OperatorScheduleStatus;
+  totalPassengers: number;
+  boardedPassengers: number;
+}
+
+export interface ITripManifestResponse {
+  tripInfo: ITripManifestInfo;
+  passengers: IManifestPassengerRecord[];
+}
+
+export interface IManifestQueryParams {
+  tripId: string;
+  search?: string;
+  boardingStatus?: BoardingStatusType;
+}
+
 

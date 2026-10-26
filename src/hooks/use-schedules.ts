@@ -65,6 +65,7 @@ export function useOperatorSchedulesQuery(params?: IScheduleFilterParams) {
         meta
       };
     },
+    placeholderData: (previousData) => previousData,
     staleTime: 0,
     refetchOnWindowFocus: true,
     retry: (failureCount, error) => {
@@ -92,7 +93,10 @@ export function useCreateScheduleMutation() {
       return await post<ApiResponse<IOperatorSchedule>>("/operator/schedules", payload);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: scheduleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["operator", "overview"] })
+      ]);
       toast.success("Departure schedule slot created successfully!");
     },
     onError: (error: Error) => {
@@ -112,7 +116,10 @@ export function useUpdateScheduleMutation() {
       return await patch<ApiResponse<IOperatorSchedule>>(`/operator/schedules/${id}`, payload);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: scheduleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["operator", "overview"] })
+      ]);
       toast.success("Departure schedule updated successfully!");
     },
     onError: (error: Error) => {
@@ -134,7 +141,10 @@ export function useUpdateScheduleStatusMutation() {
       });
     },
     onSuccess: async (_, variables) => {
-      await queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: scheduleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["operator", "overview"] })
+      ]);
       toast.success(`Schedule status changed to ${variables.status.replace("_", " ")}`);
     },
     onError: (error: Error) => {
@@ -154,7 +164,10 @@ export function useDeleteScheduleMutation() {
       return await del<ApiResponse<null>>(`/operator/schedules/${id}`);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: scheduleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["operator", "overview"] })
+      ]);
       toast.success("Schedule slot deleted successfully!");
     },
     onError: (error: Error) => {

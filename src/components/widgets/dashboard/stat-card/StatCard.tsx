@@ -83,7 +83,7 @@ export function StatCard({
   changePercent,
   trend,
   comparisonText,
-  showWave = true,
+  showWave = false,
   className,
   valueClassName,
   labelClassName,
@@ -179,12 +179,7 @@ export function StatCard({
           )}
         </div>
 
-        {/* Dynamic Wave / Sparkline */}
-        {showWave && (
-          <div className="shrink-0 pb-1">
-            <TrendSparklineWave trend={resolvedTrend} />
-          </div>
-        )}
+
       </div>
     </div>
   );

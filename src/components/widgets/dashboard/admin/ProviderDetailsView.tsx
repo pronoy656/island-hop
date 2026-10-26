@@ -54,6 +54,7 @@ export interface ProviderFerryRow {
   capacity: number;
   yearBuilt?: number;
   status: string;
+  assignedRoute?: string;
 }
 
 export interface ProviderRouteRow {
@@ -134,7 +135,13 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       className: "font-semibold text-foreground",
       cell: (item) => (
         <div>
-          <div className="font-semibold text-foreground text-xs sm:text-sm">{item.name}</div>
+          <button
+            type="button"
+            onClick={() => setSelectedFerry(item)}
+            className="font-semibold text-foreground text-xs sm:text-sm hover:text-primary transition-colors text-left cursor-pointer hover:underline"
+          >
+            {item.name}
+          </button>
           {item.registration ? (
             <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
               Reg: {item.registration}
@@ -185,17 +192,15 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
       }
     },
     {
-      header: "ACTION",
-      align: "right",
-      headerClassName: "text-right",
+      header: "ASSIGNED ROUTE",
+      className: "text-foreground text-xs font-medium",
       cell: (item) => (
-        <button
-          type="button"
-          onClick={() => setSelectedFerry(item)}
-          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold hover:underline transition-colors cursor-pointer text-xs"
-        >
-          View Ferry
-        </button>
+        <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
+          <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <span className="truncate max-w-[220px]" title={item.assignedRoute}>
+            {item.assignedRoute || "Honolulu Pier 4 ⇄ Kahului Harbor, Maui"}
+          </span>
+        </div>
       )
     }
   ];
@@ -277,15 +282,27 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
 
   const isActive = provider.user?.status === "ACTIVE";
 
-  const formattedFerries: ProviderFerryRow[] = (provider.ferries || []).map((f) => ({
-    id: f.id,
-    name: f.name,
-    registration: f.registration,
-    type: f.type || "Catamaran",
-    capacity: f.capacity,
-    yearBuilt: f.yearBuilt,
-    status: f.status
-  }));
+  const formattedFerries: ProviderFerryRow[] = (provider.ferries || []).map((f, idx) => {
+    const route =
+      provider.routes && provider.routes.length > 0
+        ? provider.routes[idx % provider.routes.length]
+        : null;
+    const dynamicRouteName = route
+      ? `${route.departurePort?.name || "Departure"} ⇄ ${route.destinationPort?.name || "Destination"}`
+      : "Honolulu Pier 4 ⇄ Kahului Harbor, Maui";
+    const assignedRoute = (f as any).assignedRoute || dynamicRouteName;
+
+    return {
+      id: f.id,
+      name: f.name,
+      registration: f.registration,
+      type: f.type || "Catamaran",
+      capacity: f.capacity,
+      yearBuilt: f.yearBuilt,
+      status: f.status,
+      assignedRoute
+    };
+  });
 
   const formattedRoutes: ProviderRouteRow[] = (provider.routes || []).map((r) => ({
     id: r.id,
@@ -413,7 +430,6 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
           changePercent={0}
           trend="neutral"
           comparisonText={`${formattedFerries.length} assigned`}
-          showWave={true}
         />
         <StatCard
           label="OPERATING ROUTES"
@@ -422,7 +438,6 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
           changePercent={0}
           trend="neutral"
           comparisonText="Active corridors"
-          showWave={true}
         />
       </div>
 
@@ -535,7 +550,8 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
                 capacity: selectedFerry.capacity,
                 yearBuilt: selectedFerry.yearBuilt || 2022,
                 status: selectedFerry.status as any,
-                providerName: provider.companyName
+                providerName: provider.companyName,
+                assignedRoute: selectedFerry.assignedRoute
               }
             : null
         }

@@ -5,7 +5,9 @@ import Link from "next/link";
 import {
   AlertCircle,
   AlertTriangle,
+  Ban,
   Calendar,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +20,8 @@ import {
   Ship,
   Ticket,
   Trash2,
-  Users
+  Users,
+  X
 } from "lucide-react";
 import { addMinutes, format, isValid, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -38,6 +41,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -51,13 +55,14 @@ import {
   TabsList,
   TabsTrigger
 } from "@/ui";
-import { DashboardTableCard, StatusBadge, type TableColumn } from "@/widgets";
+import { DashboardTableCard, StatusBadge, TablePagination, type TableColumn } from "@/widgets";
 
 const STATUS_OPTIONS: { value: OperatorScheduleStatus; label: string }[] = [
   { value: "ON_TIME", label: "On Time / Scheduled" },
   { value: "BOARDING", label: "Boarding" },
   { value: "DEPARTED", label: "Departed" },
   { value: "DELAYED", label: "Delayed" },
+  { value: "ARRIVED", label: "Arrived / Completed" },
   { value: "CANCELLED", label: "Cancelled" }
 ];
 
@@ -76,9 +81,23 @@ export default function OperatorSchedulesPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
 
-  // Reset page whenever tab, route, date, or page size changes
+  // Bulk selection & action states
+  const [selectedScheduleIds, setSelectedScheduleIds] = React.useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = React.useState(false);
+  const [bulkActionType, setBulkActionType] = React.useState<
+    "on_time" | "boarding" | "departed" | "delayed" | "arrived" | "cancelled" | "delete" | null
+  >(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = React.useState(false);
+
+  // Reset page whenever tab, route, date, or page size changes (guarded against initial mount)
+  const isFirstMount = React.useRef(true);
   React.useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     setPage(1);
+    setSelectedScheduleIds(new Set());
   }, [activeTab, routeFilter, dateFilter, pageSize]);
 
   // Modals state
@@ -111,20 +130,40 @@ export default function OperatorSchedulesPage() {
   const updateStatusMutation = useUpdateScheduleStatusMutation();
   const deleteScheduleMutation = useDeleteScheduleMutation();
 
-  const schedules = scheduleData?.schedules ?? [];
+  // Local schedules state for optimistic updates
+  const [localSchedules, setLocalSchedules] = React.useState<IOperatorSchedule[]>([]);
+
+  React.useEffect(() => {
+    if (scheduleData?.schedules) {
+      setLocalSchedules(scheduleData.schedules);
+    }
+  }, [scheduleData?.schedules]);
+
+  const rawSchedules = localSchedules.length > 0 ? localSchedules : (scheduleData?.schedules ?? []);
 
   // Pagination calculations
   const meta = scheduleData?.meta;
-  const totalCount = meta?.total ?? schedules.length;
+  const totalCount = meta?.total ?? rawSchedules.length;
   const totalPages = Math.max(1, meta?.totalPages ?? Math.ceil(totalCount / pageSize));
   const currentPage = Math.min(Math.max(page, 1), totalPages);
 
-  // Keep page clamped if items are deleted or filtered
+  // Sliced schedules for resilience in case backend returns all items
+  const displayedSchedules = React.useMemo(() => {
+    if (rawSchedules.length > pageSize) {
+      const start = (currentPage - 1) * pageSize;
+      return rawSchedules.slice(start, start + pageSize);
+    }
+    return rawSchedules;
+  }, [rawSchedules, currentPage, pageSize]);
+
+  const schedules = displayedSchedules;
+
+  // Keep page clamped ONLY when query has settled and is not in flight
   React.useEffect(() => {
-    if (page > totalPages && totalPages > 0) {
+    if (!isSchedulesLoading && !isSchedulesFetching && scheduleData && page > totalPages && totalPages > 0) {
       setPage(totalPages);
     }
-  }, [page, totalPages]);
+  }, [page, totalPages, isSchedulesLoading, isSchedulesFetching, scheduleData]);
 
   const startIndex = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIndex = Math.min(currentPage * pageSize, totalCount);
@@ -389,14 +428,172 @@ export default function OperatorSchedulesPage() {
     }
   };
 
+  // Selection Computations
+  const displayedScheduleIds = React.useMemo(() => schedules.map((s) => s.id), [schedules]);
+  const isAllCurrentPageSelected =
+    schedules.length > 0 && schedules.every((s) => selectedScheduleIds.has(s.id));
+  const isSomeCurrentPageSelected =
+    schedules.some((s) => selectedScheduleIds.has(s.id)) && !isAllCurrentPageSelected;
+  const selectedCount = selectedScheduleIds.size;
+
+  const toggleSelectAllCurrentPage = () => {
+    setSelectedScheduleIds((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (isAllCurrentPageSelected) {
+        displayedScheduleIds.forEach((id) => next.delete(id));
+      } else {
+        displayedScheduleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedScheduleIds((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedScheduleIds(new Set());
+  };
+
+  // Bulk Handlers
+  const handleBulkSetStatus = async (status: OperatorScheduleStatus) => {
+    if (selectedScheduleIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedScheduleIds) as string[];
+    setIsBulkOperating(true);
+    setBulkActionType(status.toLowerCase() as any);
+
+    const statusLabel = status.replace(/_/g, " ");
+    const toastId = toast.loading(
+      `Setting ${ids.length} ${ids.length === 1 ? "schedule" : "schedules"} to ${statusLabel}...`
+    );
+
+    setLocalSchedules((prev) =>
+      prev.map((s) => (selectedScheduleIds.has(s.id) ? { ...s, status } : s))
+    );
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      try {
+        await updateStatusMutation.mutateAsync({
+          id,
+          status
+        });
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    await refetchSchedules();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setSelectedScheduleIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully updated ${successCount} schedules to ${statusLabel}!`, {
+        id: toastId
+      });
+    } else {
+      toast.warning(`Updated ${successCount} schedules (${failCount} failed)`, { id: toastId });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedScheduleIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedScheduleIds) as string[];
+    setIsBulkOperating(true);
+    setBulkActionType("delete" as any);
+
+    const toastId = toast.loading(
+      `Deleting ${ids.length} ${ids.length === 1 ? "schedule" : "schedules"}...`
+    );
+
+    setLocalSchedules((prev) => prev.filter((s) => !selectedScheduleIds.has(s.id)));
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      try {
+        await deleteScheduleMutation.mutateAsync(id);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    await refetchSchedules();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setIsBulkDeleteModalOpen(false);
+    setSelectedScheduleIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully deleted ${successCount} schedules!`, {
+        id: toastId
+      });
+    } else {
+      toast.warning(`Deleted ${successCount} schedules (${failCount} failed)`, { id: toastId });
+    }
+  };
+
   // Stats calculation
   const totalTripsCount = totalCount;
   const boardingCount = schedules.filter((s) => s.status === "BOARDING").length;
   const onTimeCount = schedules.filter((s) => s.status === "ON_TIME").length;
   const departedCount = schedules.filter((s) => s.status === "DEPARTED").length;
+  const delayedCount = schedules.filter((s) => s.status === "DELAYED").length;
+  const arrivedCount = schedules.filter((s) => s.status === "ARRIVED").length;
+  const cancelledCount = schedules.filter((s) => s.status === "CANCELLED").length;
   const totalBookingsCount = schedules.reduce((acc, s) => acc + (s._count?.bookings || 0), 0);
 
   const scheduleColumns: TableColumn<IOperatorSchedule>[] = [
+    {
+      header: (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              isAllCurrentPageSelected
+                ? true
+                : isSomeCurrentPageSelected
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={toggleSelectAllCurrentPage}
+            aria-label="Select all schedules on current page"
+          />
+        </div>
+      ),
+      headerClassName: "w-10 px-3 text-center",
+      className: "w-10 px-3 text-center",
+      align: "center",
+      cell: (item) => {
+        const isChecked = selectedScheduleIds.has(item.id);
+        return (
+          <div
+            className="flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => toggleSelectRow(item.id)}
+              aria-label={`Select schedule ${item.id}`}
+            />
+          </div>
+        );
+      }
+    },
     {
       header: "TRIP DATE & TIME",
       cell: (item) => {
@@ -453,7 +650,7 @@ export default function OperatorSchedulesPage() {
         <div>
           <div className="font-semibold text-foreground text-xs flex items-center gap-1">
             <span>{item.route?.departurePort?.name ?? "Origin"}</span>
-            <span className="text-muted-foreground">➔</span>
+            <span className="text-muted-foreground">→</span>
             <span>{item.route?.destinationPort?.name ?? "Destination"}</span>
           </div>
           {item.route?.durationMinutes ? (
@@ -478,16 +675,21 @@ export default function OperatorSchedulesPage() {
       )
     },
     {
-      header: "BOOKINGS",
+      header: "CAPACITY",
       className: "text-xs",
       cell: (item) => {
-        const capacity = item.ferry?.capacity || item.availableSeats || 50;
-        const booked = item._count?.bookings ?? 0;
-        const pct = Math.min(Math.round((booked / capacity) * 100), 100);
+        const capacity = item.ferry?.capacity || 0;
+        const booked =
+          capacity > 0 && item.availableSeats != null
+            ? Math.max(0, capacity - item.availableSeats)
+            : (item._count?.bookings ?? 0);
+        const pct = capacity > 0 ? Math.min(Math.round((booked / capacity) * 100), 100) : 0;
         return (
           <div className="flex flex-col gap-1 min-w-[90px]">
             <div className="flex justify-between text-[11px] font-mono">
-              <span className="font-semibold text-foreground">{booked}/{capacity}</span>
+              <span className="font-semibold text-foreground">
+                {booked}/{capacity > 0 ? capacity : "—"}
+              </span>
               <span className="text-muted-foreground">{pct}%</span>
             </div>
             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
@@ -520,6 +722,7 @@ export default function OperatorSchedulesPage() {
               <option value="BOARDING">Boarding</option>
               <option value="DEPARTED">Departed</option>
               <option value="DELAYED">Delayed</option>
+              <option value="ARRIVED">Arrived</option>
               <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
@@ -668,6 +871,15 @@ export default function OperatorSchedulesPage() {
             <TabsTrigger value="DEPARTED" className="text-xs">
               Departed ({departedCount})
             </TabsTrigger>
+            <TabsTrigger value="DELAYED" className="text-xs">
+              Delayed ({delayedCount})
+            </TabsTrigger>
+            <TabsTrigger value="ARRIVED" className="text-xs">
+              Arrived ({arrivedCount})
+            </TabsTrigger>
+            <TabsTrigger value="CANCELLED" className="text-xs">
+              Cancelled ({cancelledCount})
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -771,90 +983,190 @@ export default function OperatorSchedulesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <DashboardTableCard
-            title="Ferry Departure Schedules"
-            columns={scheduleColumns}
-            data={schedules}
-            keyExtractor={(item) => item.id}
-          />
-
-          {/* Pagination Controls */}
-          {totalCount > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 bg-card p-3 sm:px-4 rounded-xl border border-border/80 shadow-xs">
-              {/* Left: Showing entries info & Page size selector */}
-              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
-                <span>
-                  Showing <span className="font-semibold text-foreground">{startIndex}</span> to{" "}
-                  <span className="font-semibold text-foreground">{endIndex}</span> of{" "}
-                  <span className="font-semibold text-foreground">{totalCount}</span> departures
+          {/* Floating Bulk Actions Bar */}
+          {selectedCount > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-950 shadow-sm backdrop-blur-md dark:border-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-100">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-2xs">
+                  {selectedCount}
                 </span>
-
-                <div className="flex items-center gap-1.5 pl-0 sm:pl-3 sm:border-l sm:border-border/60">
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">Show:</span>
-                  <ReusableSelect
-                    value={String(pageSize)}
-                    onValueChange={(val) => setPageSize(Number(val))}
-                    options={PAGE_SIZE_OPTIONS}
-                    className="h-8 text-xs w-[115px]"
-                  />
-                </div>
+                <span className="text-foreground text-xs font-semibold">
+                  {selectedCount === 1 ? "schedule selected" : "schedules selected"}
+                </span>
               </div>
 
-              {/* Right: Page Navigation Buttons */}
-              <div className="flex items-center gap-1.5 self-center sm:self-auto">
+              {/* Bulk Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage <= 1 || isSchedulesFetching}
-                  className="h-8 px-2.5 text-xs flex items-center gap-1 font-medium"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("ON_TIME")}
+                  className="h-8 cursor-pointer gap-1.5 border-emerald-200 bg-emerald-50/50 text-xs font-semibold text-emerald-700 shadow-2xs hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60"
+                  title="Mark selected schedules as On Time"
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Previous</span>
+                  {isBulkOperating && bulkActionType === "on_time" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Clock className="h-3.5 w-3.5" />
+                  )}
+                  <span>On Time</span>
                 </Button>
 
-                <div className="flex items-center gap-1">
-                  {pageNumbers.map((p, idx) =>
-                    typeof p === "number" ? (
-                      <Button
-                        key={p}
-                        variant={currentPage === p ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPage(p)}
-                        disabled={isSchedulesFetching}
-                        className={cn(
-                          "h-8 min-w-8 px-2 text-xs font-semibold",
-                          currentPage === p
-                            ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {p}
-                      </Button>
-                    ) : (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        className="px-1 text-xs font-bold text-muted-foreground select-none"
-                      >
-                        ...
-                      </span>
-                    )
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("BOARDING")}
+                  className="h-8 cursor-pointer gap-1.5 border-blue-200 bg-blue-50/50 text-xs font-semibold text-blue-700 shadow-2xs hover:bg-blue-100 hover:text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/60"
+                  title="Mark selected schedules as Boarding"
+                >
+                  {isBulkOperating && bulkActionType === "boarding" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Users className="h-3.5 w-3.5" />
                   )}
-                </div>
+                  <span>Boarding</span>
+                </Button>
 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage >= totalPages || isSchedulesFetching}
-                  className="h-8 px-2.5 text-xs flex items-center gap-1 font-medium"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("DEPARTED")}
+                  className="h-8 cursor-pointer gap-1.5 border-purple-200 bg-purple-50/50 text-xs font-semibold text-purple-700 shadow-2xs hover:bg-purple-100 hover:text-purple-800 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/60"
+                  title="Mark selected schedules as Departed"
                 >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  {isBulkOperating && bulkActionType === "departed" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Ship className="h-3.5 w-3.5" />
+                  )}
+                  <span>Departed</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("DELAYED")}
+                  className="h-8 cursor-pointer gap-1.5 border-amber-200 bg-amber-50/50 text-xs font-semibold text-amber-700 shadow-2xs hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                  title="Mark selected schedules as Delayed"
+                >
+                  {isBulkOperating && bulkActionType === "delayed" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
+                  <span>Delayed</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("ARRIVED")}
+                  className="h-8 cursor-pointer gap-1.5 border-teal-200 bg-teal-50/50 text-xs font-semibold text-teal-700 shadow-2xs hover:bg-teal-100 hover:text-teal-800 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-900/60"
+                  title="Mark selected schedules as Arrived"
+                >
+                  {isBulkOperating && bulkActionType === "arrived" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>Arrived</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => handleBulkSetStatus("CANCELLED")}
+                  className="h-8 cursor-pointer gap-1.5 border-rose-200 bg-rose-50/50 text-xs font-semibold text-rose-700 shadow-2xs hover:bg-rose-100 hover:text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                  title="Cancel selected schedules"
+                >
+                  {isBulkOperating && bulkActionType === "cancelled" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Ban className="h-3.5 w-3.5" />
+                  )}
+                  <span>Cancel</span>
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={() => setIsBulkDeleteModalOpen(true)}
+                  className="h-8 cursor-pointer gap-1.5 bg-rose-600 text-xs font-semibold text-white shadow-2xs hover:bg-rose-700"
+                  title="Delete selected schedules"
+                >
+                  {isBulkOperating && bulkActionType === "delete" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>Delete ({selectedCount})</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isBulkOperating}
+                  onClick={clearSelection}
+                  className="h-8 cursor-pointer gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  title="Deselect all schedules"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Deselect</span>
                 </Button>
               </div>
             </div>
           )}
+
+          <DashboardTableCard
+            title="Ferry Departure Schedules"
+            headerRight={
+              selectedCount > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-medium">
+                    {selectedCount} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="cursor-pointer text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : undefined
+            }
+            columns={scheduleColumns}
+            data={schedules}
+            keyExtractor={(item) => item.id}
+            rowClassName={(item) =>
+              selectedScheduleIds.has(item.id)
+                ? "bg-emerald-500/10 hover:bg-emerald-500/15 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/40 border-l-2 border-l-emerald-600 dark:border-l-emerald-400"
+                : undefined
+            }
+          />
+
+          {/* Reusable Pagination Controls */}
+          <TablePagination
+            page={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            itemName="schedules"
+            isLoading={isSchedulesFetching}
+          />
         </div>
       )}
 
@@ -1401,6 +1713,65 @@ export default function OperatorSchedulesPage() {
               ) : (
                 "Delete Schedule"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Bulk Delete Confirmation Modal */}
+      <Dialog open={isBulkDeleteModalOpen} onOpenChange={setIsBulkDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-foreground">
+                  Delete {selectedCount} Departure {selectedCount === 1 ? "Schedule" : "Schedules"}?
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  This action permanently removes the selected departure slots from the timetable.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs text-muted-foreground">
+            <p>
+              Are you sure you want to permanently delete{" "}
+              <strong className="text-foreground">
+                {selectedCount} selected {selectedCount === 1 ? "schedule" : "schedules"}
+              </strong>
+              ?
+            </p>
+            <div className="rounded-xl border border-rose-200/60 bg-rose-50/50 p-3 text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300">
+              Warning: Any confirmed passenger bookings associated with these departure schedules will require refunds or manual reassignment. This action cannot be reversed.
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              className="text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={handleBulkDelete}
+              className="text-xs font-semibold bg-rose-600 hover:bg-rose-700 cursor-pointer"
+            >
+              {isBulkOperating ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Yes, Delete {selectedCount} {selectedCount === 1 ? "Schedule" : "Schedules"}
             </Button>
           </DialogFooter>
         </DialogContent>

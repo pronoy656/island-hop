@@ -269,19 +269,6 @@ export default function AdminBookingsPage() {
             Live centralized reservation manifest across all island transfer routes and operators.
           </p>
         </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="gap-2 h-9 px-3.5 text-xs font-medium"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin text-primary" : ""}`} />
-            <span>{isFetching ? "Syncing..." : "Sync Live Data"}</span>
-          </Button>
-        </div>
       </div>
 
       {/* KPI Metric Summary Cards */}

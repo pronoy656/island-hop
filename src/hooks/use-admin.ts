@@ -19,7 +19,7 @@ import { del, get, patch, post } from "@/lib/api";
  */
 export const adminKeys = {
   all: ["admin"] as const,
-  analytics: () => [...adminKeys.all, "analytics"] as const,
+  analytics: (days?: number) => [...adminKeys.all, "analytics", days ?? 30] as const,
   providers: () => [...adminKeys.all, "providers"] as const,
   providerLists: () => [...adminKeys.providers(), "list"] as const,
   providerList: (params?: ProviderFilterParams) => [...adminKeys.providerLists(), params] as const,
@@ -33,13 +33,16 @@ export const adminKeys = {
 /**
  * 1. Query: Fetch Admin Platform Analytics & Real-Time Overview
  */
-export function useAdminAnalyticsQuery() {
+export function useAdminAnalyticsQuery(days: number = 30) {
   return useQuery({
-    queryKey: adminKeys.analytics(),
+    queryKey: adminKeys.analytics(days),
     queryFn: async ({ signal }) => {
-      const response = await get<ApiResponse<IAdminAnalyticsOverview>>("/admin/analytics/overview", {
-        signal
-      });
+      const response = await get<ApiResponse<IAdminAnalyticsOverview>>(
+        `/admin/analytics/overview?days=${days}`,
+        {
+          signal
+        }
+      );
       return response.data;
     },
     staleTime: 1000 * 60 * 3, // Fresh for 3 minutes

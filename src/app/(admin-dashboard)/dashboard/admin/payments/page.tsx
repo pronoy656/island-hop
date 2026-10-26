@@ -87,7 +87,6 @@ export default function AdminPaymentsPage() {
           changePercent={15.3}
           trend="up"
           comparisonText="vs last month"
-          showWave={true}
         />
 
         {/* Card 2: FerryGo Commission */}
@@ -99,7 +98,6 @@ export default function AdminPaymentsPage() {
           trend="up"
           comparisonText="10% platform fee"
           valueClassName="text-blue-600 dark:text-blue-500"
-          showWave={true}
         />
 
         {/* Card 3: Provider Amount */}
@@ -110,7 +108,6 @@ export default function AdminPaymentsPage() {
           changePercent={15.3}
           trend="up"
           comparisonText="90% net payout"
-          showWave={true}
         />
       </div>
 

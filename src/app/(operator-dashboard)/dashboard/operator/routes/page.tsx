@@ -4,6 +4,7 @@ import * as React from "react";
 
 import {
   AlertTriangle,
+  Anchor,
   ArrowRight,
   Check,
   ChevronLeft,
@@ -796,7 +797,7 @@ export default function OperatorRoutesPage() {
               <p className="text-foreground mt-1 text-2xl font-extrabold">
                 {totalRoutesCount} {totalRoutesCount === 1 ? "Route" : "Routes"}
               </p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">Connected port paths</p>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">Active port-to-port connections</p>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Navigation className="h-5 w-5" />
@@ -809,9 +810,9 @@ export default function OperatorRoutesPage() {
             <div>
               <p className="text-muted-foreground text-xs font-semibold uppercase">Active Routes</p>
               <p className="mt-1 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                {activeRoutesCount} Active
+                {activeRoutesCount} {activeRoutesCount === 1 ? "Route" : "Routes"}
               </p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">Open for trip schedules</p>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">Available for passenger sailings</p>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Ship className="h-5 w-5" />
@@ -826,12 +827,12 @@ export default function OperatorRoutesPage() {
                 Inactive Routes
               </p>
               <p className="mt-1 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
-                {inactiveRoutesCount} Inactive
+                {inactiveRoutesCount} {inactiveRoutesCount === 1 ? "Route" : "Routes"}
               </p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">Temporarily paused</p>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">Seasonal or service suspended</p>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-5 w-5" />
+              <Anchor className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
@@ -887,7 +888,7 @@ export default function OperatorRoutesPage() {
         <div className="bg-card border-border/80 flex flex-col items-center justify-center rounded-xl border py-16 shadow-xs">
           <Loader2 className="mb-2 h-8 w-8 animate-spin text-emerald-600" />
           <p className="text-muted-foreground text-sm font-medium">
-            Loading routes from database...
+            Loading ferry routes...
           </p>
         </div>
       ) : isRoutesError && localRoutes.length === 0 ? (

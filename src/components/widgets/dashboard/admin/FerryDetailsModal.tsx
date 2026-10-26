@@ -3,9 +3,7 @@
 import * as React from "react";
 import {
   Anchor,
-  Building2,
   Calendar,
-  CheckCircle2,
   Gauge,
   MapPin,
   Ship,
@@ -101,16 +99,6 @@ export function FerryDetailsModal({ ferry, open, onOpenChange }: FerryDetailsMod
           <div className="border border-border/70 rounded-xl p-4 divide-y divide-border/60 text-xs">
             <div className="flex items-center justify-between pb-3">
               <span className="text-muted-foreground flex items-center gap-2">
-                <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                Ferry Operator:
-              </span>
-              <span className="font-bold text-foreground">
-                {ferry.providerName || "Island Ferry Co."}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between py-3">
-              <span className="text-muted-foreground flex items-center gap-2">
                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
                 Assigned Route:
               </span>
@@ -119,22 +107,12 @@ export function FerryDetailsModal({ ferry, open, onOpenChange }: FerryDetailsMod
               </span>
             </div>
 
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between pt-3">
               <span className="text-muted-foreground flex items-center gap-2">
                 <Anchor className="h-3.5 w-3.5 text-slate-400" />
                 Home Port:
               </span>
               <span className="font-medium text-foreground">Honolulu Harbor Terminal 4</span>
-            </div>
-
-            <div className="flex items-center justify-between pt-3">
-              <span className="text-muted-foreground flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                USCG Safety Certificate:
-              </span>
-              <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                USCG-HI-VALID-2025
-              </span>
             </div>
           </div>
 

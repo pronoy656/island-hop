@@ -48,6 +48,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   DatePicker,
   Dialog,
   DialogContent,
@@ -221,6 +222,14 @@ export default function OperatorOffDaysPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
 
+  // Bulk selection & action states
+  const [selectedOffDayIds, setSelectedOffDayIds] = React.useState<Set<string>>(new Set());
+  const [isBulkOperating, setIsBulkOperating] = React.useState(false);
+  const [bulkActionType, setBulkActionType] = React.useState<
+    "delete" | "MAINTENANCE" | "WEATHER" | "PUBLIC_HOLIDAY" | null
+  >(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = React.useState(false);
+
   // Calendar month state
   const [calendarDate, setCalendarDate] = React.useState<Date>(new Date());
 
@@ -246,10 +255,16 @@ export default function OperatorOffDaysPage() {
     ferryId: "ALL"
   });
 
-  // Reset page when filters change
+  // Reset page and selection when filters change
   React.useEffect(() => {
     setPage(1);
+    setSelectedOffDayIds(new Set());
   }, [selectedCategory, selectedFerryId, pageSize]);
+
+  // Reset selection when page changes
+  React.useEffect(() => {
+    setSelectedOffDayIds(new Set());
+  }, [page]);
 
   // Overall query for stats & calendar view
   const { data: allOffDaysResponse } = useOffDaysQuery({
@@ -469,8 +484,151 @@ export default function OperatorOffDaysPage() {
     }
   };
 
+  // Selection Computations
+  const displayedOffDayIds = React.useMemo(() => offDays.map((d) => d.id), [offDays]);
+  const isAllCurrentPageSelected =
+    offDays.length > 0 && offDays.every((d) => selectedOffDayIds.has(d.id));
+  const isSomeCurrentPageSelected =
+    offDays.some((d) => selectedOffDayIds.has(d.id)) && !isAllCurrentPageSelected;
+  const selectedCount = selectedOffDayIds.size;
+
+  const toggleSelectAllCurrentPage = () => {
+    setSelectedOffDayIds((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (isAllCurrentPageSelected) {
+        displayedOffDayIds.forEach((id) => next.delete(id));
+      } else {
+        displayedOffDayIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedOffDayIds((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedOffDayIds(new Set());
+  };
+
+  // Bulk Handlers
+  const handleBulkSetCategory = async (category: OffDayCategory) => {
+    if (selectedOffDayIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedOffDayIds);
+    setIsBulkOperating(true);
+    setBulkActionType(category);
+
+    const config = getCategoryConfig(category);
+    const toastId = toast.loading(
+      `Updating ${ids.length} ${ids.length === 1 ? "off-day" : "off-days"} to ${config.label}...`
+    );
+
+    const results = await Promise.allSettled(
+      ids.map((id) => {
+        const item = offDays.find((d) => d.id === id);
+        return updateMutation.mutateAsync({
+          id,
+          payload: {
+            category,
+            date: item?.date ? format(parseISO(item.date), "yyyy-MM-dd") : undefined,
+            reason: item?.reason,
+            ferryId: item?.ferryId || null
+          }
+        });
+      })
+    );
+
+    const successCount = results.filter((r) => r.status === "fulfilled").length;
+    const failCount = results.filter((r) => r.status === "rejected").length;
+
+    await refetch();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setSelectedOffDayIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully updated ${successCount} off-days to ${config.label}!`, { id: toastId });
+    } else {
+      toast.warning(`Updated ${successCount} off-days (${failCount} failed)`, { id: toastId });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedOffDayIds.size === 0 || isBulkOperating) return;
+    const ids = Array.from(selectedOffDayIds);
+    setIsBulkOperating(true);
+    setBulkActionType("delete");
+
+    const toastId = toast.loading(
+      `Removing ${ids.length} ${ids.length === 1 ? "off-day" : "off-days"}...`
+    );
+
+    const results = await Promise.allSettled(
+      ids.map((id) => deleteMutation.mutateAsync(id))
+    );
+
+    const successCount = results.filter((r) => r.status === "fulfilled").length;
+    const failCount = results.filter((r) => r.status === "rejected").length;
+
+    await refetch();
+    setIsBulkOperating(false);
+    setBulkActionType(null);
+    setIsBulkDeleteModalOpen(false);
+    setSelectedOffDayIds(new Set());
+
+    if (failCount === 0) {
+      toast.success(`Successfully removed ${successCount} off-days! Booking slots reopened.`, { id: toastId });
+    } else {
+      toast.warning(`Removed ${successCount} off-days (${failCount} failed)`, { id: toastId });
+    }
+  };
+
   // Table Columns
   const offDayColumns: TableColumn<IOffDay>[] = [
+    {
+      header: (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              isAllCurrentPageSelected
+                ? true
+                : isSomeCurrentPageSelected
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={toggleSelectAllCurrentPage}
+            aria-label="Select all off-days on current page"
+          />
+        </div>
+      ),
+      headerClassName: "w-10 px-3 text-center",
+      className: "w-10 px-3 text-center",
+      align: "center",
+      cell: (item) => {
+        const isChecked = selectedOffDayIds.has(item.id);
+        return (
+          <div
+            className="flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => toggleSelectRow(item.id)}
+              aria-label={`Select off-day on ${item.date}`}
+            />
+          </div>
+        );
+      }
+    },
     {
       header: "DATE",
       cell: (item) => {
@@ -801,6 +959,104 @@ export default function OperatorOffDaysPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Floating Bulk Actions Bar */}
+            {selectedCount > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-950 shadow-sm backdrop-blur-md dark:border-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-100">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-2xs">
+                    {selectedCount}
+                  </span>
+                  <span className="text-foreground text-xs font-semibold">
+                    {selectedCount === 1 ? "off-day selected" : "off-days selected"}
+                  </span>
+                </div>
+
+                {/* Bulk Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Bulk Set Maintenance */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isBulkOperating}
+                    onClick={() => handleBulkSetCategory("MAINTENANCE")}
+                    className="h-8 cursor-pointer gap-1.5 border-amber-200 bg-amber-50/50 text-xs font-semibold text-amber-700 shadow-2xs hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+                    title="Set category to Maintenance for selected off-days"
+                  >
+                    {isBulkOperating && bulkActionType === "MAINTENANCE" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Wrench className="h-3.5 w-3.5" />
+                    )}
+                    <span>Set Maintenance</span>
+                  </Button>
+
+                  {/* Bulk Set Weather */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isBulkOperating}
+                    onClick={() => handleBulkSetCategory("WEATHER")}
+                    className="h-8 cursor-pointer gap-1.5 border-rose-200 bg-rose-50/50 text-xs font-semibold text-rose-700 shadow-2xs hover:bg-rose-100 hover:text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                    title="Set category to Severe Weather for selected off-days"
+                  >
+                    {isBulkOperating && bulkActionType === "WEATHER" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CloudLightning className="h-3.5 w-3.5" />
+                    )}
+                    <span>Set Weather</span>
+                  </Button>
+
+                  {/* Bulk Set Public Holiday */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isBulkOperating}
+                    onClick={() => handleBulkSetCategory("PUBLIC_HOLIDAY")}
+                    className="h-8 cursor-pointer gap-1.5 border-blue-200 bg-blue-50/50 text-xs font-semibold text-blue-700 shadow-2xs hover:bg-blue-100 hover:text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/60"
+                    title="Set category to Public Holiday for selected off-days"
+                  >
+                    {isBulkOperating && bulkActionType === "PUBLIC_HOLIDAY" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Landmark className="h-3.5 w-3.5" />
+                    )}
+                    <span>Set Holiday</span>
+                  </Button>
+
+                  {/* Bulk Delete */}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isBulkOperating}
+                    onClick={() => setIsBulkDeleteModalOpen(true)}
+                    className="h-8 cursor-pointer gap-1.5 bg-rose-600 text-xs font-semibold text-white shadow-2xs hover:bg-rose-700"
+                    title="Delete selected off-days"
+                  >
+                    {isBulkOperating && bulkActionType === "delete" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    <span>Delete ({selectedCount})</span>
+                  </Button>
+
+                  {/* Deselect */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isBulkOperating}
+                    onClick={clearSelection}
+                    className="h-8 cursor-pointer gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    title="Deselect all off-days"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Deselect</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <DashboardTableCard
               title="Off-Days & Maintenance Schedule"
               columns={offDayColumns}
@@ -1375,6 +1631,66 @@ export default function OperatorOffDaysPage() {
             >
               {deleteMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Remove & Reopen Bookings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Dialog open={isBulkDeleteModalOpen} onOpenChange={setIsBulkDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-foreground">
+                  Delete {selectedCount} {selectedCount === 1 ? "Off-Day" : "Off-Days"}?
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  This action removes the blackout dates and re-opens passenger booking slots.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs text-muted-foreground">
+            <p>
+              Are you sure you want to permanently remove{" "}
+              <strong className="text-foreground">
+                {selectedCount} selected {selectedCount === 1 ? "off-day" : "off-days"}
+              </strong>
+              ?
+            </p>
+            <div className="rounded-xl border border-rose-200/60 bg-rose-50/50 p-3 text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300">
+              Note: Removing these blackout records allows passengers to view and book sailings on these dates again according to scheduled ferry timetables.
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              className="text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isBulkOperating}
+              onClick={handleBulkDelete}
+              className="text-xs font-semibold bg-rose-600 hover:bg-rose-700 cursor-pointer"
+            >
+              {isBulkOperating ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Yes, Delete {selectedCount} {selectedCount === 1 ? "Off-Day" : "Off-Days"}
             </Button>
           </DialogFooter>
         </DialogContent>

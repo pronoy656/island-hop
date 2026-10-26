@@ -58,11 +58,13 @@ export default function OperatorOverviewPage() {
           </div>
           <div>
             <div className="text-foreground text-sm font-semibold">
-              {item.ferry?.name || "Assigned Ferry"}
+              {item.ferry?.name || "Ferry"}
             </div>
-            <div className="text-muted-foreground text-[11px]">
-              {item.captain || item.ferry?.registration || "Captain Assigned"}
-            </div>
+            {item.ferry?.registration && (
+              <div className="text-muted-foreground text-[11px] font-mono">
+                {item.ferry.registration}
+              </div>
+            )}
           </div>
         </div>
       )
@@ -83,13 +85,17 @@ export default function OperatorOverviewPage() {
       }
     },
     {
-      header: "DEPARTURE",
+      header: "SCHEDULED TIME",
       cell: (item) => (
         <div>
           <div className="text-foreground font-mono text-xs font-bold">
             {formatTime(item.departureTime)}
           </div>
-          <div className="text-muted-foreground text-[11px]">{item.gate || "Gate Pier"}</div>
+          {item.arrivalTime && (
+            <div className="text-muted-foreground text-[11px]">
+              Arrival: <span className="font-mono font-medium">{formatTime(item.arrivalTime)}</span>
+            </div>
+          )}
         </div>
       )
     },
@@ -97,14 +103,14 @@ export default function OperatorOverviewPage() {
       header: "CAPACITY",
       className: "text-xs",
       cell: (item) => {
-        const capacity = item.capacity || item.ferry?.capacity || 50;
+        const capacity = item.capacity || item.ferry?.capacity || 0;
         const booked = item.bookedSeats ?? 0;
-        const pct = Math.min(Math.round((booked / capacity) * 100), 100);
+        const pct = capacity > 0 ? Math.min(Math.round((booked / capacity) * 100), 100) : 0;
         return (
           <div className="flex min-w-[100px] flex-col gap-1">
             <div className="flex justify-between font-mono text-[11px]">
               <span className="text-foreground font-semibold">
-                {booked}/{capacity}
+                {booked}/{capacity > 0 ? capacity : "—"}
               </span>
               <span className="text-muted-foreground">{pct}%</span>
             </div>
@@ -120,7 +126,12 @@ export default function OperatorOverviewPage() {
     },
     {
       header: "STATUS",
-      cell: (item) => <StatusBadge status={item.status} />
+      cell: (item) => {
+        const readableStatus = item.status
+          ? item.status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+          : "On Time";
+        return <StatusBadge status={readableStatus} />;
+      }
     },
     {
       header: "ACTION",
@@ -133,7 +144,7 @@ export default function OperatorOverviewPage() {
           className="h-8 border-emerald-200 px-3 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
           asChild
         >
-          <Link href={item.id ? `/dashboard/operator/manifest?scheduleId=${item.id}` : "/dashboard/operator/manifest"}>
+          <Link href={item.id ? `/dashboard/operator/manifest?tripId=${item.id}` : "/dashboard/operator/manifest"}>
             Manifest
           </Link>
         </Button>
@@ -204,7 +215,12 @@ export default function OperatorOverviewPage() {
     },
     {
       header: "STATUS",
-      cell: (item) => <StatusBadge status={item.status} />
+      cell: (item) => {
+        const readableStatus = item.status
+          ? item.status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+          : "Confirmed";
+        return <StatusBadge status={readableStatus} />;
+      }
     }
   ];
 
