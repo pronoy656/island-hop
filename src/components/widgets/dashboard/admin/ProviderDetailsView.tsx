@@ -459,7 +459,7 @@ export function ProviderDetailsView({ providerId }: ProviderDetailsViewProps) {
         {/* Operating Routes Table */}
         <div className="flex flex-col gap-3">
           <DashboardTableCard
-            title={`Active Operating Routes (${totalRoutes})`}
+            title={`Operating Routes (${totalRoutes})`}
             columns={routeColumns}
             data={paginatedRoutes}
             keyExtractor={(item) => item.id}
