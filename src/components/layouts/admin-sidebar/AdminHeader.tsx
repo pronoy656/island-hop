@@ -46,6 +46,8 @@ export function AdminHeader({
       return "Bookings Management";
     if (pathname.startsWith("/dashboard/admin/payments") || pathname.startsWith("/admin/payments"))
       return "Payments & Commissions";
+    if (pathname.startsWith("/dashboard/admin/faqs") || pathname.startsWith("/admin/faqs"))
+      return "FAQ Management";
     if (pathname.startsWith("/dashboard/admin/settings") || pathname.startsWith("/admin/settings"))
       return "Settings";
     return "Admin Portal";

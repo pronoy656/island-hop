@@ -8,6 +8,7 @@ import {
   Building2,
   CalendarCheck,
   CircleDollarSign,
+  HelpCircle,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -58,6 +59,11 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     icon: CircleDollarSign
   },
   {
+    name: "FAQ Management",
+    href: "/dashboard/admin/faqs",
+    icon: HelpCircle
+  },
+  {
     name: "Settings",
     href: "/dashboard/admin/settings",
     icon: Settings
@@ -101,6 +107,12 @@ export function AdminSidebar({ onItemClick, className }: AdminSidebarProps) {
       return (
         pathname.startsWith("/dashboard/admin/ports") ||
         pathname.startsWith("/admin/ports")
+      );
+    }
+    if (item.name === "FAQ Management") {
+      return (
+        pathname.startsWith("/dashboard/admin/faqs") ||
+        pathname.startsWith("/admin/faqs")
       );
     }
     return pathname.startsWith(item.href);

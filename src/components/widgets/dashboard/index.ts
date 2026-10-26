@@ -14,4 +14,5 @@ export * from "./admin/AdminSettingsView";
 export * from "./admin/PortManagementView";
 export * from "./admin/UserDetailsModal";
 export * from "./admin/BookingDetailsModal";
+export * from "./admin/FaqManagementView";
 export * from "./operator/VesselImageUploader";

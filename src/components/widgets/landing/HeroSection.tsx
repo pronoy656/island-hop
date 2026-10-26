@@ -22,21 +22,17 @@ import { addDays, format, isBefore, parseISO } from "date-fns";
 import heroBg from "@/assets/landing-page/hero-bg.png";
 import { cn } from "@/lib/utils";
 
+import { useConnectedPortsQuery } from "@/hooks/use-routes";
+import { getUniquePorts } from "@/data/ports";
+
 import { PassengerSelector } from "@/components/widgets/booking/PassengerSelector";
 import { PortCombobox, PortOption } from "@/components/widgets/booking/PortCombobox";
-import { getUniquePorts } from "@/data/ports";
-import { useConnectedPortsQuery } from "@/hooks/use-routes";
-import {
-  Card,
-  CardContent,
-  DatePicker,
-  Label
-} from "@/ui";
+import { Card, CardContent, DatePicker, Label } from "@/ui";
 
 export function HeroSection() {
   const [tripType, setTripType] = useState<"one-way" | "round-trip">("one-way");
-  const [departurePort, setDeparturePort] = useState("Malé (Villingili Terminal)");
-  const [destinationPort, setDestinationPort] = useState("Maafushi Island Port");
+  const [departurePort, setDeparturePort] = useState("Malé Ferry Terminal");
+  const [destinationPort, setDestinationPort] = useState("Maafushi Jetty");
   const [departureDate, setDepartureDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [returnDate, setReturnDate] = useState(() => format(addDays(new Date(), 3), "yyyy-MM-dd"));
   const [adults, setAdults] = useState(1);
@@ -58,8 +54,7 @@ export function HeroSection() {
     if (connectedPorts && connectedPorts.length > 0) {
       const activeDep = connectedPorts.find(
         (cp) =>
-          cp.portName.toLowerCase() === departurePort.toLowerCase() ||
-          cp.portId === departurePort
+          cp.portName.toLowerCase() === departurePort.toLowerCase() || cp.portId === departurePort
       );
       if (activeDep && activeDep.destinations && activeDep.destinations.length > 0) {
         return activeDep.destinations.map((d) => ({
@@ -78,8 +73,7 @@ export function HeroSection() {
     if (connectedPorts && connectedPorts.length > 0) {
       const matched = connectedPorts.find(
         (cp) =>
-          cp.portName.toLowerCase() === newDeparture.toLowerCase() ||
-          cp.portId === newDeparture
+          cp.portName.toLowerCase() === newDeparture.toLowerCase() || cp.portId === newDeparture
       );
       if (matched && matched.destinations && matched.destinations.length > 0) {
         const isCurrentDestValid = matched.destinations.some(
@@ -134,8 +128,16 @@ export function HeroSection() {
     params.set("adults", String(adults));
     params.set("children", String(childrenCount));
     return `/ferries?${params.toString()}`;
-  }, [tripType, departurePort, destinationPort, departureDate, returnDate, passengersParam, adults, childrenCount]);
-
+  }, [
+    tripType,
+    departurePort,
+    destinationPort,
+    departureDate,
+    returnDate,
+    passengersParam,
+    adults,
+    childrenCount
+  ]);
 
   return (
     <section className="relative w-full">
@@ -291,7 +293,7 @@ export function HeroSection() {
                     type="button"
                     onClick={handleSwapPorts}
                     title="Swap departure and destination"
-                    className="hidden sm:flex absolute left-[calc(100%+7px)] top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-8 w-8 items-center justify-center rounded-full border border-border/80 bg-background text-muted-foreground shadow-xs transition-all duration-300 hover:rotate-180 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400 active:scale-90 cursor-pointer"
+                    className="border-border/80 bg-background text-muted-foreground absolute top-1/2 left-[calc(100%+7px)] z-20 hidden h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-xs transition-all duration-300 hover:rotate-180 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 active:scale-90 sm:flex dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                   >
                     <ArrowLeftRight className="h-3.5 w-3.5" />
                   </button>
@@ -299,11 +301,11 @@ export function HeroSection() {
               </div>
 
               {/* MOBILE SWAP BUTTON */}
-              <div className="flex justify-center -my-1 sm:hidden">
+              <div className="-my-1 flex justify-center sm:hidden">
                 <button
                   type="button"
                   onClick={handleSwapPorts}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/95 px-3 py-1 text-[11px] font-bold text-muted-foreground hover:border-blue-500 hover:text-blue-600 active:scale-95 shadow-2xs transition-all cursor-pointer"
+                  className="border-border/80 bg-background/95 text-muted-foreground inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold shadow-2xs transition-all hover:border-blue-500 hover:text-blue-600 active:scale-95"
                 >
                   <ArrowUpDown className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   <span>Swap Direction</span>
@@ -337,7 +339,7 @@ export function HeroSection() {
                   onChange={handleDepartureDateChange}
                   minDate={new Date()}
                   placeholder="Departure date"
-                  className="border border-input bg-muted/40 hover:bg-muted/60 text-foreground h-11 w-full rounded-xl px-3.5 text-xs font-bold shadow-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  className="border-input bg-muted/40 hover:bg-muted/60 text-foreground h-11 w-full rounded-xl border px-3.5 text-xs font-bold shadow-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
 
@@ -353,7 +355,7 @@ export function HeroSection() {
                     onChange={setReturnDate}
                     minDate={departureDate || new Date()}
                     placeholder="Return date"
-                    className="border border-input bg-muted/40 hover:bg-muted/60 text-foreground h-11 w-full rounded-xl px-3.5 text-xs font-bold shadow-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    className="border-input bg-muted/40 hover:bg-muted/60 text-foreground h-11 w-full rounded-xl border px-3.5 text-xs font-bold shadow-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
               )}
@@ -378,19 +380,21 @@ export function HeroSection() {
               <div
                 className={cn(
                   "min-w-0 space-y-1.5",
-                  tripType === "round-trip" ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2 lg:col-span-1"
+                  tripType === "round-trip"
+                    ? "sm:col-span-2 lg:col-span-1"
+                    : "sm:col-span-2 lg:col-span-1"
                 )}
               >
                 <Label
-                  className="text-muted-foreground hidden lg:flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase invisible select-none"
+                  className="text-muted-foreground invisible hidden items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase select-none lg:flex"
                   aria-hidden="true"
                 >
-                  <span className="h-3 w-3 inline-block" />
+                  <span className="inline-block h-3 w-3" />
                   <span>SEARCH</span>
                 </Label>
                 <Link
                   href={searchUrl}
-                  className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-600/25 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.98] cursor-pointer whitespace-nowrap"
+                  className="group flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-xs font-bold whitespace-nowrap text-white shadow-md shadow-blue-600/25 transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.98] sm:text-sm"
                 >
                   <span>Search Ferries</span>
                   <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />

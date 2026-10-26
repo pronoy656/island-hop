@@ -84,3 +84,20 @@ export function useCancelBookingMutation() {
     },
   });
 }
+
+/**
+ * 4. Query: Get Current Logged-in User's Bookings (GET /api/v1/bookings/my)
+ */
+export function useMyBookingsQuery() {
+  return useQuery({
+    queryKey: bookingKeys.mine(),
+    queryFn: async ({ signal }) => {
+      const response = await get<ApiResponse<IBookingDetail[]>>("/bookings/my", {
+        signal,
+      });
+      return response.data ?? [];
+    },
+    staleTime: 30 * 1000,
+  });
+}
+

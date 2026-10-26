@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
+import { Clock, FileText, Mail, Phone } from "lucide-react";
 
-import { Bell, Clock, FileText, Mail, Phone } from "lucide-react";
-
-import { FAQ_DATA } from "@/data/faqs";
+import { FAQ_DATA, type FAQItem } from "@/data/faqs";
 
 import {
   Accordion,
@@ -14,24 +13,30 @@ import {
   AnimatedSection,
   Button,
   Card,
-  CardContent,
-  Input
+  CardContent
 } from "@/ui";
 
+const STORAGE_KEY = "islandhop_admin_faqs_v1";
+
 export default function HelpPage() {
-  const [emailSub, setEmailSub] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [faqs, setFaqs] = React.useState<FAQItem[]>(FAQ_DATA);
 
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailSub) return;
-    setIsSubscribed(true);
-    setTimeout(() => {
-      setEmailSub("");
-      setIsSubscribed(false);
-    }, 3000);
-  };
-
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as (FAQItem & { isPublished?: boolean })[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const published = parsed.filter((item) => item.isPublished !== false);
+          if (published.length > 0) {
+            setFaqs(published);
+          }
+        }
+      }
+    } catch {
+      // fallback to initial static data
+    }
+  }, []);
   return (
     <div className="dark:bg-background min-h-screen bg-[#F8FAFC]">
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 pb-20">
@@ -54,8 +59,8 @@ export default function HelpPage() {
           <AnimatedSection delay={0.05} className="lg:col-span-8">
             <Card className="border-border/80 dark:bg-card rounded-3xl border bg-white p-6 shadow-sm sm:p-8">
               <CardContent className="p-0">
-                <Accordion type="single" collapsible defaultValue="faq-1" className="w-full">
-                  {FAQ_DATA.map((faq) => (
+                <Accordion type="single" collapsible defaultValue={faqs[0]?.id || "faq-1"} className="w-full">
+                  {faqs.map((faq) => (
                     <AccordionItem key={faq.id} value={faq.id}>
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-3.5 pr-2">
@@ -163,46 +168,6 @@ export default function HelpPage() {
             </Card>
           </AnimatedSection>
         </div>
-
-        {/* Bottom Banner: Stay updated / Newsletter */}
-        <AnimatedSection
-          delay={0.1}
-          className="mt-14 overflow-hidden rounded-3xl border border-blue-100 bg-[#EBF5FF] p-6 shadow-sm sm:p-8 dark:border-blue-900/40 dark:bg-blue-950/30"
-        >
-          <div className="flex flex-col items-center justify-between gap-6 lg:flex-row">
-            {/* Left Icon & Text */}
-            <div className="flex items-center gap-4 text-center sm:text-left">
-              <div className="dark:bg-card flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-[#003B95] shadow-xs dark:text-blue-300">
-                <Bell className="h-6 w-6 stroke-[2.2]" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="text-foreground text-xl font-bold tracking-tight">Stay updated</h3>
-                <p className="text-muted-foreground text-xs">
-                  Subscribe to get the latest updates about schedules, promotions and service
-                  alerts.
-                </p>
-              </div>
-            </div>
-
-            {/* Right: Email Input & Subscribe Button */}
-            <form onSubmit={handleSubscribe} className="flex w-full max-w-md items-center gap-2">
-              <Input
-                type="email"
-                value={emailSub}
-                onChange={(e) => setEmailSub(e.target.value)}
-                placeholder="Enter your email address"
-                required
-                className="border-border/80 dark:bg-card h-12 flex-1 rounded-2xl bg-white text-xs font-medium"
-              />
-              <Button
-                type="submit"
-                className="h-12 rounded-2xl bg-[#003B95] px-6 text-xs font-bold text-white shadow-md transition-all hover:bg-[#002f77]"
-              >
-                {isSubscribed ? "Subscribed!" : "Subscribe"}
-              </Button>
-            </form>
-          </div>
-        </AnimatedSection>
       </div>
     </div>
   );

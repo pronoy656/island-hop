@@ -6,7 +6,7 @@ import {
   parseAsStringLiteral
 } from "nuqs/server";
 
-export const BOOKING_STATUS_OPTIONS = ["ALL", "CONFIRMED", "CANCELLED", "COMPLETED"] as const;
+export const BOOKING_STATUS_OPTIONS = ["ALL", "CONFIRMED", "CHECKED_IN", "CANCELLED", "PENDING"] as const;
 export type BookingStatusFilter = (typeof BOOKING_STATUS_OPTIONS)[number];
 
 export const manageBookingsParsers = {
